@@ -1,0 +1,15 @@
+report:
+  title: "Requirement-based Test Report"
+  report_dir: <<REPORT_DIR>> (replaced by system on import, leave line like this)
+  test_environment: "Testing"
+
+functional_specs:
+  SCOPE-1: "First Scope Behavior"
+  ...
+
+categories:
+  unit: "Unit Tests"
+  integration: "Integration Tests"
+  system: "System Tests"
+  regression: "Regression Tests"
+  mutation: "Mutation Tests"
