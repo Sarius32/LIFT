@@ -26,13 +26,38 @@ def create_new_project() -> None:
     # copy PUT
     shutil.copytree(input_put_path, PUT_PATH)
 
-    # copy eval template, requirements and pytest html report config
-    for file in ["evaluation_template.md", "program-requirements.yml"]:
-        shutil.copy((DATA_PATH / file), (PROJECT_PATH / file))
+    # copy eval template and requirements
+    shutil.copy((DATA_PATH / "evaluation_template.md"), (PROJECT_PATH / "evaluation_template.md"))
+    shutil.copy((DATA_PATH / "program-requirements.md"), (PROJECT_PATH / "program-requirements.yml"))
 
+    # load pytest html report template
     with open(DATA_PATH / "pytest_html_report.yml") as file:
         lines = file.readlines()
-    lines = [line if "<<REPORT_DIR>>" not in line else f"  report_dir: {REPORTS_PATH}" for line in lines]
+
+    # extract requirement IDs and titles from requirements doc
+    reqs = {}
+    with open(DATA_PATH / "program-requirements.yml") as file:
+        req_id = None
+        for line in file.readlines():
+            if "- id: " in line:
+                req_id = line.split("- id: ")[-1].strip()
+                continue
+
+            if "title: " in line and req_id is not None:
+                reqs[req_id] = line.split("title: ")[-1].strip()
+                req_id = None
+                continue
+
+    # create filled pytest HTML report config with report dir and requirements
+    new_lines = []
+    for line in lines:
+        if "<<REPORT_DIR>>" in line:
+            new_lines.append(f"  report_dir: {REPORTS_PATH}")
+            continue
+        if "<<REQUIREMENT_IDS>>" in line:
+            [new_lines.append(f"  {id_}: \"{title}\"") for id_, title in sorted(reqs.items(), key=lambda v: v[0])]
+            continue
+        new_lines.append(line)
     with open(PROJECT_PATH / "pytest_html_report.yml", "w") as file:
         file.writelines(lines)
 

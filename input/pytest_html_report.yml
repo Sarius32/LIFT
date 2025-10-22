@@ -4,8 +4,7 @@ report:
   test_environment: "Testing"
 
 functional_specs:
-  SCOPE-1: "First Scope Behavior"
-  ...
+  <<REQUIREMENT_IDS>> (replaced by system on import, leave line like this)
 
 categories:
   unit: "Unit Tests"
