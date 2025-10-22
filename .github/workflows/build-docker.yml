@@ -1,9 +1,11 @@
 name: Build Docker Image and Create Release
 
 on:
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+  # Auto-trigger only when functional files change (any branch)
   push:
-    branches:
-      - main
     paths:
       - 'workflow/**'
       - 'Dockerfile'
@@ -22,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build the image locally
+      # Build the Docker image locally
       - name: Build Docker image
         run: |
           docker build -t lift-image:latest .
