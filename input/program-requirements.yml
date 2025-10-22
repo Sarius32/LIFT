@@ -1,0 +1,13 @@
+test_requirements:
+  scope_and_environment:
+    - id: SCOPE-1
+      title: Scope of the PUT #1
+      description: The PUT bust do XYZ
+      acceptance: The behavior can be observed in this way
+    - id: SCOPE-2
+      title: Pure-Python functionality
+      description: The package includes an optional C extension for performance. However, all functionality must work without the extension to guarantee portability across environments.
+      acceptance: All documented behaviors succeed with or without the C extension.
+
+  behavioral_field_1:
+    ...
