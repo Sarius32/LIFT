@@ -1,0 +1,51 @@
+name: Build Docker Image and Create Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'workflow/**'
+      - 'Dockerfile'
+      - 'requirements.txt'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build the image locally
+      - name: Build Docker image
+        run: |
+          docker build -t lift-image:latest .
+
+      # Save image to a tar file
+      - name: Save Docker image to file
+        run: |
+          docker save -o lift-image.tar lift-image:latest
+
+      # Get short commit hash for tagging the release
+      - name: Get short commit SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # Create GitHub Release and attach the tar file
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ env.sha_short }}
+          name: "LIFT Docker Image - ${{ env.sha_short }}"
+          body: |
+            Automated build of the Docker image from commit ${{ env.sha_short }}.
+            Contains the latest workflow and dependencies.
+          files: lift-image.tar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
