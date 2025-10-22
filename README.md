@@ -14,14 +14,19 @@ In case, you want to build it yourself, use this command:
 docker build -t lift-image .
 ```
 
-To run LIFT on a PUT (Program Under Test) of your choosing, exexcute the following command:
+To run LIFT on a PUT (Program Under Test) of your choosing, execute the following command (volumes are required!):
 ```bash
-docker run --rm \
+docker run \
     --name YOUR_CONTAINER_NAME \
-    -v "YOUR_INPUT_FOLDER:/workspace/input" \
-    -v "YOUR_ARCHIVE_FOLDER:/workspace/.archive" \
+    -v "YOUR_INPUT_DIR:/workspace/input" \
+    -v "YOUR_ARCHIVE_DIR:/workspace/.archive" \
     lift-image
 ```
+Use `--rm` to remove the container as soon as LIFT concludes execution.
+Use `-d` to start the container detached.
+
+Add `-v "YOUR_LOGS_DIR:/workspace/logs"` to have the logs written outside the container.
+
 
 Note: You need to link the two volumes to the `/workspace/input` (read-only) and `/workspace/.archive` (LIFT output).
 The contents of the `/input` directory will not be changed. The `/input` directory needs to adhere to this layout:
