@@ -28,7 +28,7 @@ def create_new_project() -> None:
 
     # copy eval template and requirements
     shutil.copy((DATA_PATH / "evaluation_template.md"), (PROJECT_PATH / "evaluation_template.md"))
-    shutil.copy((DATA_PATH / "program-requirements.md"), (PROJECT_PATH / "program-requirements.yml"))
+    shutil.copy((DATA_PATH / "program-requirements.yml"), (PROJECT_PATH / "program-requirements.yml"))
 
     # load pytest html report template
     with open(DATA_PATH / "pytest_html_report.yml") as file:
