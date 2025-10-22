@@ -135,7 +135,7 @@ def execute_tests() -> bool:
                         f"--rootdir={PROJECT_PATH.absolute()}",
                         f"--cache-clear", f"--disable-warnings",
                         f"--junit-xml={(REPORTS_PATH / 'execution-report.xml').absolute()}",
-                        f"--cov=simplejson", f"--cov-branch",
+                        f"--cov={PUT_NAME}", f"--cov-branch",
                         f"--cov-report=xml:{(REPORTS_PATH / 'coverage-report.xml').absolute()}"])
 
     # remove pytest-html-report temp files
