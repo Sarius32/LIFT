@@ -35,6 +35,7 @@ def get_coverage_dict(cov_xml):
     return {mapping[k]: v for k, v in cleaned.items()}
 
 
+overall_stats = dict()
 for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
     trial_id = int(re.search(r"archive_(\d+)", trial.name).group(1))
 
@@ -53,7 +54,7 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
 
     iteration_data = dict()
     for reports_zip in reports_zips:
-        iteration = int(re.search(r"reports_(\d+).zip", reports_zip.name).group(1))
+        iteration = int(re.search(r"reports_(\d+)\.zip", reports_zip.name).group(1))
 
         with TmpDir() as tmpdir:
             tmp_path = Path(tmpdir)
@@ -96,4 +97,28 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
     df.to_csv(out_csv)
     print(f"✅ Trial {trial_id:>02d}: Data collected and stored in {out_csv}")
 
-print(f"\n✅ Data Collection done for all trials!")
+    if fss.exists():
+        iteration = int(re.search(r"FSS_(\d+)", list(fss.glob("FSS_*"))[0].name).group(1))
+        fss_data = df.loc[iteration].copy()
+        fss_data["iteration"] = iteration
+    else:
+        fss_data = pd.Series({col: None for col in df.columns})
+
+    if lps.exists():
+        iteration = int(re.search(r"LPS_(\d+)", list(lps.glob("LPS_*"))[0].name).group(1))
+        lps_data = df.loc[iteration].copy()
+        lps_data["iteration"] = iteration
+    else:
+        lps_data = pd.Series({col: None for col in df.columns})
+
+    fss_data = fss_data.drop("final").add_prefix("fss_")
+    lps_data = lps_data.drop("final").add_prefix("lps_")
+
+    overall_stats[trial_id] = fss_data.combine_first(lps_data)
+
+overall = pd.DataFrame.from_dict(overall_stats, orient="index")
+overall.index.name = "trial"
+
+out_csv = analysis_output / "fss_lps_all_trials.csv"
+overall.to_csv(out_csv)
+print(f"\n✅ Data Collection done for all trials! Overall statistics stored in {out_csv}")
