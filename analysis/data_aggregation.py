@@ -83,9 +83,10 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
             exec_data = get_execution_dict(exec_path)
             cov_data = get_coverage_dict(cov_path)
 
+            fixing = True if fixes.exists() else None
             final = ("<FINAL>" in evaluation.read_text("UTF-8")) if evaluation.exists() else None
 
-            iteration_data[iteration] = {**exec_data, **cov_data, "final": final}
+            iteration_data[iteration] = {**exec_data, **cov_data, "fixing": fixing, "final": final}
 
     numeric_cols = ['errors', 'tests_failed', 'tests_skipped', 'tests_total', 'exec_time',
                     'line_valid', 'line_covered', 'line_cov', 'branch_valid', 'branch_covered', 'branch_cov']
@@ -111,8 +112,8 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
     else:
         lps_data = pd.Series({col: None for col in df.columns})
 
-    fss_data = fss_data.drop("final").add_prefix("fss_")
-    lps_data = lps_data.drop("final").add_prefix("lps_")
+    fss_data = fss_data.drop(["fixing", "final"]).add_prefix("fss_")
+    lps_data = lps_data.drop(["fixing", "final"]).add_prefix("lps_")
 
     overall_stats[trial_id] = fss_data.combine_first(lps_data)
 
