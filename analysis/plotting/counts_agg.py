@@ -28,8 +28,9 @@ del trial_df, tests, df
 plt.figure(figsize=(9, 6))
 sns.set_theme()
 
-sns.lineplot(data=lift_df.reset_index(), x="iteration", y="tests_total", hue="trial_id", legend=False)
-
+palette = sns.color_palette("husl", n_colors=len(lift_df.index.get_level_values("trial_id").unique()))
+sns.lineplot(data=lift_df.reset_index(), x="iteration", y="tests_total", hue="trial_id", legend=False,
+             alpha=0.7, marker="o", palette=palette)
 plt.xlabel(r"Iteration $k$")
 plt.ylabel(r"Test count")
 
