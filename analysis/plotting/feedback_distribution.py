@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sns
 
 data_path = Path("<<DATA_OUTPUT_PATH>>").resolve()
-plots_path = Path("./plots").resolve()
+plots_path = Path("<<PLOTS_PATH>>").resolve()
 
 # collect trial data into lift_df
 lift_df = pd.DataFrame()
@@ -48,3 +48,4 @@ plt.legend()
 
 plt.tight_layout()
 plt.savefig(plots_path / "feedback_dist.svg")
+print(f"✅ Plot for feedback distribution generated: {(plots_path / "feedback_dist.svg")}")
