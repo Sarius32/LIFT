@@ -17,11 +17,6 @@ for trial_csv in data_path.glob("trial_*.csv"):
     # nan => fix feedback in this iteration
     fix = trial_df["final"].isna().astype(int)
 
-    # if 0 iteration not in series => fix iteration
-    if 0 not in fix.index:
-        fix.at[0] = 1
-        fix.sort_index(inplace=True)
-
     # get the cumulative sum (over the iterations) of fixes
     fix_cum = fix.cumsum()
 
