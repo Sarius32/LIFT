@@ -121,8 +121,15 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
 
     overall_stats[trial_id] = fss_data.combine_first(lps_data)
 
-overall = pd.DataFrame.from_dict(overall_stats, orient="index")
+overall = pd.DataFrame.from_dict(overall_stats, orient="index",
+                                 columns=['fss_iteration', 'fss_errors', 'fss_tests_total', 'fss_tests_failed',
+                                          'fss_tests_skipped', 'fss_exec_time', 'fss_line_valid', 'fss_line_covered',
+                                          'fss_line_cov', 'fss_branch_valid', 'fss_branch_covered', 'fss_branch_cov',
+                                          'lps_iteration', 'lps_errors', 'lps_tests_total', 'lps_tests_failed',
+                                          'lps_tests_skipped', 'lps_exec_time', 'lps_line_valid', 'lps_line_covered',
+                                          'lps_line_cov', 'lps_branch_valid', 'lps_branch_covered', 'lps_branch_cov'])
 overall.index.name = "trial"
+overall.sort_index(inplace=True)
 
 out_csv = analysis_output / "fss_lps_all_trials.csv"
 overall.to_csv(out_csv)
