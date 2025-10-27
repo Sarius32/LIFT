@@ -40,8 +40,9 @@ iter_df = lift_df.groupby("iteration").mean()
 plt.figure(figsize=(9, 6))
 sns.set_theme()
 
-sns.lineplot(data=iter_df.reset_index(), x="iteration", y="fix", label=r"$\bar{r}_k$ - mean per-Iteration Fix Rate")
-sns.lineplot(data=iter_df.reset_index(), x="iteration", y="fix_cum_rate",
+sns.lineplot(data=iter_df.reset_index(), x="iteration", y="fix", marker="o",
+             label=r"$\bar{r}_k$ - mean per-Iteration Fix Rate")
+sns.lineplot(data=iter_df.reset_index(), x="iteration", y="fix_cum_rate", linestyle="--",
              label=r"$\bar{R}_k$ - mean cumulative Fix Rate")
 
 plt.yticks([.2, .3, .4, .5, .6, .7, .8, .9, 1])
