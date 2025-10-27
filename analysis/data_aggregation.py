@@ -52,7 +52,7 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
         print(f"❌ Trial {trial_id:>02d}: Less then {ITER_COUNT} iterations executed!")
         continue
 
-    iteration_data = dict()
+    iteration_data = {i: dict() for i in range(25)}
     for reports_zip in reports_zips:
         iteration = int(re.search(r"reports_(\d+)\.zip", reports_zip.name).group(1))
 
@@ -65,34 +65,38 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
             cov_path = tmp_path / "coverage-report.xml"
             fixes, evaluation = (tmp_path / "fixes.md"), (tmp_path / "evaluation.md")
 
-            if not fixes.exists() and not evaluation.exists():
-                print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
-                      f"No agent feedback (neither fixes.md nor evaluation.md) found!")
-                continue
-
             if not exec_path.exists():
                 print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
                       f"No execution report found!")
-                continue
+            else:
+                iteration_data[iteration].update(get_execution_dict(exec_path))
 
             if not cov_path.exists():
                 print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
                       f"No coverage report found!")
-                continue
+            else:
+                iteration_data[iteration].update(get_coverage_dict(cov_path))
 
-            exec_data = get_execution_dict(exec_path)
-            cov_data = get_coverage_dict(cov_path)
+            if not fixes.exists() and not evaluation.exists():
+                print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
+                      f"No agent feedback (neither fixes.md nor evaluation.md) found!")
+                fixing, final = True, None  # assume fixing is done
+            else:
+                fixing = True if fixes.exists() else None
+                final = ("<FINAL>" in evaluation.read_text("UTF-8")) if evaluation.exists() else None
 
-            fixing = True if fixes.exists() else None
-            final = ("<FINAL>" in evaluation.read_text("UTF-8")) if evaluation.exists() else None
+            iteration_data[iteration].update({"fixing": fixing, "final": final})
 
-            iteration_data[iteration] = {**exec_data, **cov_data, "fixing": fixing, "final": final}
+    df = pd.DataFrame.from_dict(iteration_data, orient="index",
+                                columns=['errors', 'fixing', 'final', 'tests_total', 'tests_failed', 'tests_skipped',
+                                         'exec_time', 'line_valid', 'line_covered', 'line_cov', 'branch_valid',
+                                         'branch_covered', 'branch_cov'])
 
     numeric_cols = ['errors', 'tests_failed', 'tests_skipped', 'tests_total', 'exec_time',
                     'line_valid', 'line_covered', 'line_cov', 'branch_valid', 'branch_covered', 'branch_cov']
-    df = pd.DataFrame.from_dict(iteration_data, orient="index")
     df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric)
     df.index.name = "iteration"
+    df.sort_index(inplace=True)
 
     out_csv = analysis_output / f"trial_{trial_id:>02d}.csv"
     df.to_csv(out_csv)
