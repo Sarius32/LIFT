@@ -45,11 +45,11 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
     tests_zips = [*trial.glob("tests_*.zip")]
 
     if len(reports_zips) != len(tests_zips):
-        print(f"⚠️ Trial {trial_id:>02d}: Not the same number of test and report iterations found!")
+        print(f"❌ Trial {trial_id:>02d}: Not the same number of test and report iterations found!")
         continue
 
     if len(reports_zips) != ITER_COUNT:
-        print(f"⚠️ Trial {trial_id:>02d}: Less then {ITER_COUNT} iterations executed!")
+        print(f"❌ Trial {trial_id:>02d}: Less then {ITER_COUNT} iterations executed!")
         continue
 
     iteration_data = dict()
