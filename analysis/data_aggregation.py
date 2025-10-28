@@ -1,3 +1,4 @@
+import ast
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -22,7 +23,18 @@ def get_execution_dict(exec_xml):
     root = tree.getroot()
     cleaned = {k: v for k, v in root.find("testsuite").attrib.items() if k in mapping.keys()}
 
-    return {mapping[k]: v for k, v in cleaned.items()}
+    test_types = {"unit": 0, "integration": 0, "system": 0}
+    for case in root.findall(".//testcase"):
+        props = case.find("properties")
+        if props is None:
+            continue
+        for prop in props.findall("property"):
+            if prop.get("name") == "categories":
+                found_types = ast.literal_eval(prop.get("value"))
+                for type_ in test_types.keys():
+                    test_types[type_] += (1 if type_ in found_types else 0)
+
+    return {**{mapping[k]: v for k, v in cleaned.items()}, **test_types}
 
 
 def get_coverage_dict(cov_xml):
@@ -89,8 +101,8 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
 
     df = pd.DataFrame.from_dict(iteration_data, orient="index",
                                 columns=['errors', 'fixing', 'final', 'tests_total', 'tests_failed', 'tests_skipped',
-                                         'exec_time', 'line_valid', 'line_covered', 'line_cov', 'branch_valid',
-                                         'branch_covered', 'branch_cov'])
+                                         'exec_time', 'unit', 'integration', 'system', 'line_valid', 'line_covered',
+                                         'line_cov', 'branch_valid', 'branch_covered', 'branch_cov'])
 
     numeric_cols = ['errors', 'tests_failed', 'tests_skipped', 'tests_total', 'exec_time',
                     'line_valid', 'line_covered', 'line_cov', 'branch_valid', 'branch_covered', 'branch_cov']
@@ -123,11 +135,13 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
 
 overall = pd.DataFrame.from_dict(overall_stats, orient="index",
                                  columns=['fss_iteration', 'fss_errors', 'fss_tests_total', 'fss_tests_failed',
-                                          'fss_tests_skipped', 'fss_exec_time', 'fss_line_valid', 'fss_line_covered',
-                                          'fss_line_cov', 'fss_branch_valid', 'fss_branch_covered', 'fss_branch_cov',
-                                          'lps_iteration', 'lps_errors', 'lps_tests_total', 'lps_tests_failed',
-                                          'lps_tests_skipped', 'lps_exec_time', 'lps_line_valid', 'lps_line_covered',
-                                          'lps_line_cov', 'lps_branch_valid', 'lps_branch_covered', 'lps_branch_cov'])
+                                          'fss_tests_skipped', 'fss_exec_time', 'fss_unit', 'fss_integration',
+                                          'fss_system', 'fss_line_valid', 'fss_line_covered', 'fss_line_cov',
+                                          'fss_branch_valid', 'fss_branch_covered', 'fss_branch_cov', 'lps_iteration',
+                                          'lps_errors', 'lps_tests_total', 'lps_tests_failed', 'lps_tests_skipped',
+                                          'lps_exec_time', 'lps_unit', 'lps_integration', 'lps_system',
+                                          'lps_line_valid', 'lps_line_covered', 'lps_line_cov', 'lps_branch_valid',
+                                          'lps_branch_covered', 'lps_branch_cov'])
 overall.index.name = "trial"
 overall.sort_index(inplace=True)
 
