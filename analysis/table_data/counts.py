@@ -56,3 +56,4 @@ data.append(r"\end{table}")
 
 with open(tables_path / "test_counts.tex", "w") as file:
     file.write("\n".join(data))
+print(f"✅ Table for Test suite size and exec. time over all trials generated: {(tables_path / "test_counts.tex")}")

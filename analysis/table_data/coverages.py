@@ -58,9 +58,11 @@ fss_df = lift_df.dropna(subset=["fss_iteration"])[["trial", "fss_line_valid", "f
 fss_df.columns = fss_df.columns.str.removeprefix("fss_")
 create_coverage_table(fss_df, r"Coverages of the \acrlongpl{FSS} for all Trials",
                       "app:cov_fss", "fss_cov_table.tex")
+print(f"✅ Table for FSS Coverages over all trials generated: {(tables_path / "fss_cov_table.tex")}")
 
 lps_df = lift_df.dropna(subset=["lps_iteration"])[["trial", "lps_line_valid", "lps_line_covered", "lps_line_cov",
                                                    "lps_branch_valid", "lps_branch_covered", "lps_branch_cov"]].copy()
 lps_df.columns = lps_df.columns.str.removeprefix("lps_")
 create_coverage_table(lps_df, r"Coverages of the \acrlongpl{LPS} for all Trials",
                       "app:cov_lps", "lps_cov_table.tex")
+print(f"✅ Table for LPS Coverages over all trials generated: {(tables_path / "fss_cov_table.tex")}")
