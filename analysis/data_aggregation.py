@@ -1,6 +1,8 @@
 import ast
+import pickle
 import re
 import xml.etree.ElementTree as ET
+from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory as TmpDir
 from zipfile import ZipFile
@@ -13,6 +15,9 @@ LIFT_OUTPUT = Path("<<LIFT_OUTPUT_PATH>>")
 analysis_output = Path("<<DATA_OUTPUT_PATH>>")
 analysis_output.mkdir(exist_ok=True)
 
+reqs_output = (analysis_output / "reqs").resolve()
+reqs_output.mkdir(exist_ok=True)
+
 
 def get_execution_dict(exec_xml):
     mapping = {"errors": "errors",
@@ -23,18 +28,31 @@ def get_execution_dict(exec_xml):
     root = tree.getroot()
     cleaned = {k: v for k, v in root.find("testsuite").attrib.items() if k in mapping.keys()}
 
-    test_types = {"unit": 0, "integration": 0, "system": 0}
+    # collect test types and reqs
+    reqs, types = {}, []
     for case in root.findall(".//testcase"):
+        case_name = case.get("classname") + "::" + case.get("name")
         props = case.find("properties")
         if props is None:
             continue
         for prop in props.findall("property"):
-            if prop.get("name") == "categories":
-                found_types = ast.literal_eval(prop.get("value"))
-                for type_ in test_types.keys():
-                    test_types[type_] += (1 if type_ in found_types else 0)
+            prop_name = prop.get("name")
+            if prop_name == "functional_specification":
+                reqs[case_name] = []
+                lst = reqs[case_name]
+            elif prop_name == "categories":
+                lst = types
+            else:
+                continue
 
-    return {**{mapping[k]: v for k, v in cleaned.items()}, **test_types}
+            found = ast.literal_eval(prop.get("value"))
+            found = [found] if isinstance(found, str) else found
+            lst.extend(found)
+
+    type_counts = {"unit": 0, "integration": 0, "system": 0}
+    type_counts.update(dict(Counter(types)))
+
+    return {**{mapping[k]: v for k, v in cleaned.items()}, **type_counts}, reqs
 
 
 def get_coverage_dict(cov_xml):
@@ -65,6 +83,7 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
         continue
 
     iteration_data = {i: dict() for i in range(25)}
+    iteration_reqs = {i: dict() for i in range(25)}
     for reports_zip in reports_zips:
         iteration = int(re.search(r"reports_(\d+)\.zip", reports_zip.name).group(1))
 
@@ -81,7 +100,9 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
                 print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
                       f"No execution report found!")
             else:
-                iteration_data[iteration].update(get_execution_dict(exec_path))
+                exec_df, reqs = get_execution_dict(exec_path)
+                iteration_data[iteration].update(exec_df)
+                iteration_reqs[iteration].update(reqs)
 
             if not cov_path.exists():
                 print(f"⚠️ Trial {trial_id:>02d}, Iteration {iteration:>02d}: "
@@ -112,7 +133,11 @@ for trial in [e for e in LIFT_OUTPUT.glob("archive_*") if e.is_dir()]:
 
     out_csv = analysis_output / f"trial_{trial_id:>02d}.csv"
     df.to_csv(out_csv)
-    print(f"✅ Trial {trial_id:>02d}: Data collected and stored in {out_csv}")
+
+    out_pkl = reqs_output / f"trial_{trial_id:>02d}.pkl"
+    with open(out_pkl, "wb") as file:
+        pickle.dump(iteration_reqs, file)
+    print(f"✅ Trial {trial_id:>02d}: Data collected and stored in {out_csv} & {out_pkl}")
 
     if fss.exists():
         iteration = int(re.search(r"FSS_(\d+)", list(fss.glob("FSS_*"))[0].name).group(1))
