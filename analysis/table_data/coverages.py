@@ -35,7 +35,7 @@ def create_coverage_table(df, caption, label, file_name):
     data.insert(0, r"\textbf{Total Branches} & \textbf{Covered Branches} & \textbf{Branch Coverage (\%)} \\")
     data.insert(0, r"\textbf{Trial ID} & \textbf{Total Lines} & \textbf{Covered Lines} & \textbf{Line Coverage (\%)} &")
     data.insert(0, r"\toprule")
-    data.insert(-1, r"\bottomrule")
+    data.append(r"\bottomrule")
 
     # shift table data
     data = [2 * "    " + e for e in data]
