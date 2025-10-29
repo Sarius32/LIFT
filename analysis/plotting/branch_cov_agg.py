@@ -51,7 +51,7 @@ plt.fill_between(plot_df["iteration"], plot_df["quant_02"], plot_df["quant_08"],
                  label=r"$b_{k,(0.2:0.8)}$ - Interquantile Branch coverage range (0.2-0.8)")
 
 plt.xlabel(r"Iteration $k$")
-plt.ylabel(r"Branch coverage")
+plt.ylabel(r"Branch coverage $b$")
 plt.legend(loc="lower right")
 
 plt.tight_layout()

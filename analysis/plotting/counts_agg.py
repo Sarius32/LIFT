@@ -35,7 +35,7 @@ def individual_plot():
     sns.lineplot(data=lift_df.reset_index(), x="iteration", y="tests_total", hue="trial_id", legend=False,
                  alpha=0.7, marker="o", palette=palette)
     plt.xlabel(r"Iteration $k$")
-    plt.ylabel(r"Test count")
+    plt.ylabel(r"Test count $t$")
 
     plt.tight_layout()
     plt.savefig(plots_path / "test_counts_ind.svg")
@@ -71,7 +71,7 @@ def agg_test_count_plot():
                      label=r"$t_{k,(0.2:0.8)}$ - Interquantile Test count range (0.2-0.8)")
 
     plt.xlabel(r"Iteration $k$")
-    plt.ylabel(r"Test count")
+    plt.ylabel(r"Test count $t$")
     plt.legend(loc="lower right")
 
     plt.tight_layout()

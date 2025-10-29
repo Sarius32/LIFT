@@ -51,7 +51,7 @@ plt.fill_between(plot_df["iteration"], plot_df["quant_02"], plot_df["quant_08"],
                  label=r"$l_{k,(0.2:0.8)}$ - Interquantile Line coverage range (0.2-0.8)")
 
 plt.xlabel(r"Iteration $k$")
-plt.ylabel(r"Line coverage")
+plt.ylabel(r"Line coverage $l$")
 plt.legend(loc="lower right")
 
 plt.tight_layout()
