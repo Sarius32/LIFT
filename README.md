@@ -29,12 +29,48 @@ Add `-v "YOUR_LOGS_DIR:/workspace/logs"` to have the logs written outside the co
 
 
 Note: You need to link the two volumes to the `/workspace/input` (read-only) and `/workspace/.archive` (LIFT output).
-The contents of the `/input` directory will not be changed. The `/input` directory needs to adhere to this layout:
-...
+The contents of the `/input` directory will not be changed. Examples for the `/input` files need can be found under [`📂 /input`](./input) The `/input` directory needs to adhere to this layout:<br>
+```
+input/
+├── PUT_SOURCES               (source files of the PUT)
+├── .env                      (environment variables)
+├── generator.md              (TSG system prompt)
+├── debugger.md               (TSD system prompt)
+├── evaluator.md              (TSE system prompt)
+├── evaluation_template.md    (TSE output template)
+├── program-requirements.yml  (program requirements)
+└── pytest_html_report.yml    (config file for pytest-html-report plugin)
+```
 
 The `/.archive` directory will contain all LIFT output artifacts. These are the FSS (First Sufficient Suite), LPS (Last Passing Suite), all intermediary suites and reports as well as a pickle export of the final states of each agent after completing its task.
-The `/.archive` directory wil have this layout (automatically created, needs to be empty on start-up):
-...
+The `/.archive` directory wil have this layout (automatically created, needs to be empty on start-up):<br>
+```
+.archive/
+├── archive_xx  (archive of the trial xx)
+│   ├── logs/           (contains log files)
+│   ├── conversations/  (contains the agents state exported after final message)
+│   │
+│   ├── _FSS_/  (data of the FSS - if available)
+│   │   ├── tests/
+│   │   ├── FSS_yy  (yy - iteration number)
+│   │   ├── evaluation.md
+│   │   ├── execution-report.xml
+│   │   └── coverage-report.xml
+│   │
+│   ├── _LPS_/  (data of the LPS - if available)
+│   │   ├── tests/
+│   │   ├── LPS_yy  (yy - iteration number)
+│   │   ├── evaluation.md
+│   │   ├── execution-report.xml
+│   │   └── coverage-report.xml
+│   │
+│   ├── tests_yy.zip  (yy - iteration number)
+│   ├── ...
+│   ├── reports_yy.zip  (yy - iteration number)
+│   └── ...
+│
+└── ...
+```
 
 ---
 
