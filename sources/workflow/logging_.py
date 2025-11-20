@@ -3,7 +3,7 @@ import logging.config
 from datetime import datetime
 from pathlib import Path
 
-CONFIG = lambda console_lvl, file_lvl, file_path: {
+CONFIG = lambda file_path: {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
@@ -20,18 +20,18 @@ CONFIG = lambda console_lvl, file_lvl, file_path: {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'level': console_lvl,
+            'level': "INFO",
             'formatter': 'simple',
             'stream': 'ext://sys.stdout'
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'level': file_lvl,
+            'level': "DEBUG",
             'formatter': 'detailed',
             'filename': str(file_path),
             'mode': 'a',
             'maxBytes': 10485760,  # 10MB
-            'backupCount': 10,
+            'backupCount': 50,
             'encoding': 'utf-8'
         }
     },
@@ -55,38 +55,30 @@ CONFIG = lambda console_lvl, file_lvl, file_path: {
 _setup = False
 
 
-def _setup_logging(
-        log_level_file="DEBUG",
-        log_level_console="INFO",
-        log_file=None,
-        timestamp=None,
-        log_dir="logs",
-        app_name="LIFT"
-):
+def _setup_logging():
     global _setup
 
-    if not _setup:
-        # Create logs directory
-        log_path_obj = Path(log_dir)
-        log_path_obj.mkdir(exist_ok=True)
+    if _setup:
+        return
 
-        # Generate log filename if not provided
-        if timestamp is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        if log_file is None:
-            log_file = f"{app_name}_{timestamp}.log"
+    # Create logs directory
+    log_dir = Path("logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-        log_file_path = log_path_obj / log_file
+    # Generate log filename if not provided
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file_name = f"LIFT_{timestamp}.log"
+    log_file = log_dir / log_file_name
 
-        # Apply configuration
-        logging.config.dictConfig(CONFIG(log_level_console, log_level_file, log_file_path))
+    # Apply configuration
+    logging.config.dictConfig(CONFIG(log_file))
 
-        # Create logger for this module and log setup completion
-        logger = logging.getLogger(__name__)
-        logger.info(f"Logging initialized - File: {log_file_path}")
-        logger.debug(f"File log level: {log_level_file}, Console log level: {log_level_console}")
+    # Create logger for this module and log setup completion
+    logger = logging.getLogger(__name__)
+    logger.info(f"Logging initialized - File: {log_file}")
+    logger.debug(f"File log level: DEBUG, Console log level: INFO")
 
-        _setup = True
+    _setup = True
 
 
 _setup_logging()
