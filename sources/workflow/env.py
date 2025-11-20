@@ -8,11 +8,12 @@ import logging_
 LOGGER = logging_.get_logger(__name__)
 _setup = False
 
-API_KEY, MODEL, PUT_NAME, MAX_ITER = None, None, None, None
+API_KEY, PUT_NAME, MAX_ITER = None, None, None
+GEN_MODEL, DEBUG_MODEL, EVAL_MODEL = "", "", ""
 
 
 def _setup_env():
-    global _setup, API_KEY, MODEL, PUT_NAME, MAX_ITER
+    global _setup, API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL, PUT_NAME, MAX_ITER
 
     if _setup:
         return
@@ -27,7 +28,6 @@ def _setup_env():
 
     required_vars = {
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-        "LIFT_MODEL": os.getenv("LIFT_MODEL"),
         "LIFT_PUT": os.getenv("LIFT_PUT"),
         "LIFT_MAX_ITER": os.getenv("LIFT_MAX_ITER"),
     }
@@ -38,9 +38,24 @@ def _setup_env():
             exit(-1)
 
     API_KEY = required_vars["OPENAI_API_KEY"]
-    MODEL = required_vars["LIFT_MODEL"]
     PUT_NAME = required_vars["LIFT_PUT"]
     MAX_ITER = int(required_vars["LIFT_MAX_ITER"])
+
+    # get models
+    all_model = os.getenv("LIFT_MODEL")
+    gen_model = os.getenv("LIFT_GEN_MODEL")
+    debug_model = os.getenv("LIFT_DEBUG_MODEL")
+    eval_model = os.getenv("LIFT_EVAL_MODEL")
+
+    if not all_model:
+        if not gen_model or not debug_model or not eval_model:
+            LOGGER.error("Either set all agent models individually (LIFT_GEN_MODEL,LIFT_DEBUG_MODEL,LIFT_EVAL_MODEL) "
+                         "or define fallback model using LIFT_MODEL in .env file!")
+            exit(-1)
+
+    GEN_MODEL = gen_model or all_model
+    DEBUG_MODEL = debug_model or all_model
+    EVAL_MODEL = eval_model or all_model
 
     _setup = True
 
@@ -61,10 +76,10 @@ REPORTS_PATH = (PROJECT_PATH / "reports").resolve()
 
 
 def log():
-    LOGGER.debug(
+    LOGGER.info(
         "Setup environment:\n"
-        f"  OPENAI_API_KEY: {API_KEY[:6]}… (hidden)\n"
-        f"  LIFT_MODEL:     {MODEL}\n"
-        f"  LIFT_PUT:       {PUT_NAME}\n"
-        f"  LIFT_MAX_ITER:  {MAX_ITER}"
+        f"    OPENAI_API_KEY: {API_KEY[:6]}… (hidden)\n"
+        f"    MODEL:          Generator -> {GEN_MODEL}, Debugger -> {DEBUG_MODEL}, Evaluator -> {EVAL_MODEL}\n"
+        f"    LIFT_PUT:       {PUT_NAME}\n"
+        f"    LIFT_MAX_ITER:  {MAX_ITER}"
     )

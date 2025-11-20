@@ -7,7 +7,7 @@ from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCa
     ResponseOutputText
 
 import logging_
-from env import API_KEY, MODEL
+from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL
 from tools import TOOLS_SPEC, TOOLS_IMPL, tool_list_dir
 from prompts import GEN_NAME, GEN_SYS_PROMPT, DEB_NAME, DEB_SYS_PROMPT, DEB_PROMPT, EVAL_NAME, EVAL_SYS_PROMPT, \
     EVAL_PROMPT
@@ -82,15 +82,15 @@ def _redact_tool_result(name: str, result: dict) -> dict:
 class Agent:
     type_ = "agent"
 
-    def __init__(self, name: str, sys_prompt: str, req_output: str = None):
+    def __init__(self, model: str, name: str, sys_prompt: str, req_output: str = None):
+        self._model = model
+
         self._logger = logging_.get_logger("AGENT " + name)
         self._sys_prompt = sys_prompt
         self._req_output = req_output
 
         self._logger.debug(f"System prompt: {_preview(repr(self._sys_prompt))}")
-        self._messages = [
-            {"role": "system", "content": self._sys_prompt},
-        ]
+        self._messages = [{"role": "system", "content": self._sys_prompt}]
 
     def query(self, instruction: str):
         self._logger.info(f"Calling with instruction: {_preview(repr(instruction))}")
@@ -103,7 +103,7 @@ class Agent:
             for _ in range(5):
                 try:
                     response: Response = client.responses.create(
-                        model=MODEL,
+                        model=self._model,
                         instructions=self._sys_prompt,
                         input=self._messages,
                         tools=TOOLS_SPEC,
@@ -193,14 +193,14 @@ class Generator(Agent):
     type_ = GEN_NAME.lower()
 
     def __init__(self, iteration):
-        super().__init__(GEN_NAME + f" #{iteration:02d}", GEN_SYS_PROMPT)
+        super().__init__(GEN_MODEL, GEN_NAME + f" #{iteration:02d}", GEN_SYS_PROMPT)
 
 
 class Debugger(Agent):
     type_ = DEB_NAME.lower()
 
     def __init__(self, iteration):
-        super().__init__(DEB_NAME + f" #{iteration:02d}", DEB_SYS_PROMPT, "fixes.md")
+        super().__init__(DEBUG_MODEL, DEB_NAME + f" #{iteration:02d}", DEB_SYS_PROMPT, "fixes.md")
 
     def query(self):
         return super().query(DEB_PROMPT)
@@ -210,7 +210,7 @@ class Evaluator(Agent):
     type_ = EVAL_NAME.lower()
 
     def __init__(self, iteration):
-        super().__init__(EVAL_NAME + f" #{iteration:02d}", EVAL_SYS_PROMPT, "evaluation.md")
+        super().__init__(EVAL_MODEL, EVAL_NAME + f" #{iteration:02d}", EVAL_SYS_PROMPT, "evaluation.md")
 
     def query(self):
         return super().query(EVAL_PROMPT)
