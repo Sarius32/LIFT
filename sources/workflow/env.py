@@ -1,28 +1,51 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 import logging_
 
 LOGGER = logging_.get_logger(__name__)
+_setup = False
 
-# Project Settings
-if os.getenv("OPENAI_API_KEY", -1) == -1:
-    LOGGER.error("OPENAI_API_KEY not set in .env file!")
-    exit(-1)
-if os.getenv("LIFT_MODEL", -1) == -1:
-    LOGGER.error("LIFT_MODEL not set in .env file!")
-    exit(-1)
-if os.getenv("LIFT_PUT", -1) == -1:
-    LOGGER.error("LIFT_PUT not set in .env file!")
-    exit(-1)
-if os.getenv("LIFT_MAX_ITER", -1) == -1:
-    LOGGER.error("LIFT_MAX_ITER not set in .env file!")
-    exit(-1)
+API_KEY, MODEL, PUT_NAME, MAX_ITER = None, None, None, None
 
-API_KEY = os.getenv("OPENAI_API_KEY")
-MODEL = os.getenv("LIFT_MODEL")
-PUT_NAME = os.getenv("LIFT_PUT")
-MAX_ITER = int(os.getenv("LIFT_MAX_ITER"))
+
+def _setup_env():
+    global _setup, API_KEY, MODEL, PUT_NAME, MAX_ITER
+
+    if _setup:
+        return
+
+    # Check for .env file
+    env_file = Path("./input/.env")
+    if not env_file.exists():
+        LOGGER.error(".env file not found at ./input/.env!\nLIFT requires .env file in this location!")
+        exit(-1)
+
+    load_dotenv(Path("./input/.env"), verbose=True)
+
+    required_vars = {
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+        "LIFT_MODEL": os.getenv("LIFT_MODEL"),
+        "LIFT_PUT": os.getenv("LIFT_PUT"),
+        "LIFT_MAX_ITER": os.getenv("LIFT_MAX_ITER"),
+    }
+
+    for var_name, value in required_vars.items():
+        if value is None:
+            LOGGER.error(f"{var_name} not set in .env file!")
+            exit(-1)
+
+    API_KEY = required_vars["OPENAI_API_KEY"]
+    MODEL = required_vars["LIFT_MODEL"]
+    PUT_NAME = required_vars["LIFT_PUT"]
+    MAX_ITER = int(required_vars["LIFT_MAX_ITER"])
+
+    _setup = True
+
+
+_setup_env()
 
 # Workflow paths
 LIFT_PATH = Path("").resolve()

@@ -1,8 +1,3 @@
-from dotenv import load_dotenv
-from pathlib import Path
-
-load_dotenv(Path("./input/.env"), verbose=True)
-
 import logging_
 import env
 
