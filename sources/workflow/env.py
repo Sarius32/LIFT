@@ -25,7 +25,7 @@ PUT_NAME = os.getenv("LIFT_PUT")
 MAX_ITER = int(os.getenv("LIFT_MAX_ITER"))
 
 # Workflow paths
-LIFT_PATH = Path(".").resolve()
+LIFT_PATH = Path("").resolve()
 LIFT_ARCHIVE = (LIFT_PATH / ".archive").resolve()
 ARCHIVE_CON = (LIFT_ARCHIVE / "conversations").resolve()
 DATA_PATH = Path(LIFT_PATH / "input").resolve()

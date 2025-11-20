@@ -7,9 +7,7 @@ on:
   # Auto-trigger only when functional files change (any branch)
   push:
     paths:
-      - 'workflow/**'
-      - 'Dockerfile'
-      - 'requirements.txt'
+      - 'sources/**'
 
 permissions:
   contents: write
@@ -30,7 +28,7 @@ jobs:
       # Build the Docker image locally
       - name: Build Docker image
         run: |
-          docker build -t lift-image:latest .
+          docker build -t lift-image:latest ./sources
 
       # Save image to a tar file
       - name: Save Docker image to file
