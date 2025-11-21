@@ -339,7 +339,18 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
     return {"ok": True}
 
 
-available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file]
+@tool_metadata(
+    description="Calling this function indicates the intent to end the conversation after completing all tasks. "
+                "Fails if a required output is missing or the final_text is not a valid value.",
+    properties={"final_text": {"type": "string", "description": "The final text of the conversation."}},
+    required=["final_text"]
+)
+def tool_end_conversation(final_text: str):
+    return final_text
+
+
+available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file,
+                   tool_end_conversation]
 
 
 def get_available_tools():
