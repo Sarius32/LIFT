@@ -92,6 +92,27 @@ class Agent:
         self._logger.debug(f"System prompt: {_preview(repr(self._sys_prompt))}")
         self._messages = [{"role": "system", "content": self._sys_prompt}]
 
+    def _handle_tool_call(self, tool_call: ResponseFunctionToolCall):
+        # get function & arguments
+        name = tool_call.name
+        args = json.loads(tool_call.arguments or "{}")
+        self._logger.info(f"[TOOL CALL] - {name}({_redact_tool_args(name, args)})")
+
+        # actually call function
+        try:
+            result = TOOLS_IMPL[name](**args)
+            self._logger.info(f"[TOOL RESULT] - {name} -> {_redact_tool_result(name, result)}")
+        except Exception as e:
+            result = {"error": str(e)}
+            self._logger.error(f"[TOOL ERROR] - {name} failed: {e}")
+
+        # append function call & response
+        self._messages.append({
+            "type": "function_call_output",
+            "call_id": tool_call.call_id,
+            "output": json.dumps(result)
+        })
+
     def query(self, instruction: str):
         self._logger.info(f"Calling with instruction: {_preview(repr(instruction))}")
         self._messages.append({"role": "user", "content": instruction})
@@ -103,13 +124,8 @@ class Agent:
             for _ in range(5):
                 try:
                     response: Response = client.responses.create(
-                        model=self._model,
-                        instructions=self._sys_prompt,
-                        input=self._messages,
-                        tools=TOOLS_SPEC,
-                        tool_choice="auto",
-                        parallel_tool_calls=False,
-                    )
+                        model=self._model, input=self._messages,
+                        tools=TOOLS_SPEC, tool_choice="auto", parallel_tool_calls=False, )
                     break
                 except RateLimitError as e:
                     self._logger.info(
@@ -163,25 +179,7 @@ class Agent:
                     self._logger.info(f"[REASONING] - summary: {content.summary}, content: {content.content}")
 
                 elif isinstance(content, ResponseFunctionToolCall):
-                    # get function & arguments
-                    name = content.name
-                    args = json.loads(content.arguments or "{}")
-                    self._logger.info(f"[TOOL CALL] - {name}({_redact_tool_args(name, args)})")
-
-                    # actually call function
-                    try:
-                        result = TOOLS_IMPL[name](**args)
-                        self._logger.info(f"[TOOL RESULT] - {name} -> {_redact_tool_result(name, result)}")
-                    except Exception as e:
-                        result = {"error": str(e)}
-                        self._logger.error(f"[TOOL ERROR] - {name} failed: {e}")
-
-                    # append function call & response
-                    self._messages.append({
-                        "type": "function_call_output",
-                        "call_id": content.call_id,
-                        "output": json.dumps(result)
-                    })
+                    self._handle_tool_call(content)
 
                 else:
                     self._logger.debug(f"[EVENT] - {content}")
