@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Optional, Dict, List
 
 from env import PROJECT_PATH
+from project_utils import tool_metadata
 
 
 def safe_path(rel: str) -> Optional[Path]:
@@ -16,6 +17,27 @@ def safe_path(rel: str) -> Optional[Path]:
     return p
 
 
+@tool_metadata(
+    description="Recursively list files and directories under a path (relative to repo root), filtered by a glob. "
+                "Can optionally include hidden entries.",
+    properties={
+        "path": {
+            "type": "string",
+            "description": "Starting directory relative to repo root.",
+            "default": ".",
+        },
+        "glob": {
+            "type": "string",
+            "description": "Glob pattern to filter results.",
+            "default": "*",
+        },
+        "include_hidden": {
+            "type": "boolean",
+            "description": "Include hidden files/folders (names starting with '.').",
+            "default": False,
+        },
+    }
+)
 def tool_list_dir(path: str = ".", glob: str = "*", include_hidden: bool = False) -> Dict[str, Any]:
     """
     Recursively list all files and directories under the given path, filtered by glob.
@@ -98,6 +120,28 @@ def _read_file_common(rel: str, offset: int, max_bytes: int) -> Dict[str, Any]:
         }
 
 
+@tool_metadata(
+    description="Read up to `max_bytes` starting from `offset` from a single file under the repo root. "
+                "Hidden file allowed. Returns UTF-8 text if possible, else Base64-encoded bytes.",
+    properties={
+        "path": {
+            "type": "string",
+            "description": "File path relative to repo root.",
+        },
+        "offset": {
+            "type": "integer",
+            "description": "Byte offset to start reading from.",
+            "default": 0,
+        },
+        "max_bytes": {
+            "type": "integer",
+            "description": "Maximum number of bytes to read.",
+            "default": 200_000,
+            "minimum": 1,
+        },
+    },
+    required=["path"]
+)
 def tool_read_file(path: str, offset: int = 0, max_bytes: int = 200_000) -> Dict[str, Any]:
     """
     Read up to `max_bytes` starting from the offset from a single file under the repo root.
@@ -146,6 +190,25 @@ def tool_read_many(paths: List[str], offset: int = 0, max_bytes_per_file: int = 
     return {"entries": sorted(entries, key=lambda e: e["path"])}
 
 
+@tool_metadata(
+    description="Create or overwrite a UTF-8 text file under the repo root.",
+    properties={
+        "path": {
+            "type": "string",
+            "description": "Target file path relative to repo root.",
+        },
+        "content": {
+            "type": "string",
+            "description": "UTF-8 text content to write.",
+        },
+        "overwrite": {
+            "type": "boolean",
+            "description": "If false and file exists, return an error.",
+            "default": True,
+        },
+    },
+    required=["path", "content"]
+)
 def tool_write_file(path: str, content: str, overwrite: bool = True) -> Dict[str, Any]:
     """
     Create or overwrite a text file (UTF-8) under the repo root.
@@ -175,6 +238,17 @@ def tool_write_file(path: str, content: str, overwrite: bool = True) -> Dict[str
     return {"ok": True}
 
 
+@tool_metadata(
+    description="Delete a file or directory (recursively) under the repo root. "
+                "Idempotent for missing paths; refuses to delete the repo root.",
+    properties={
+        "path": {
+            "type": "string",
+            "description": "Path relative to repo root to delete.",
+        },
+    },
+    required=["path"]
+)
 def tool_delete_path(path: str) -> Dict[str, Any]:
     """
     Delete a file or directory under the repo root.
@@ -202,6 +276,24 @@ def tool_delete_path(path: str) -> Dict[str, Any]:
     return {"ok": True}
 
 
+@tool_metadata(
+    description="Replace exactly one occurrence of `find` with `replace` in a UTF-8 text file. "
+                "Fails if not found or not unique, or if find==replace.",
+    properties={
+        "path": {
+            "type": "string",
+            "description": "File path relative to repo root.",
+        },
+        "find": {
+            "type": "string",
+            "description": "Substring to locate (must occur exactly once).",
+        },
+        "replace": {
+            "type": "string",
+            "description": "Replacement substring (must differ from `find`).",
+        },
+    },
+    required=["path", "find", "replace"])
 def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
     """
     Replace exactly one occurrence of `find` with `replace` in a UTF-8 text file.
@@ -247,129 +339,24 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
     return {"ok": True}
 
 
-# ---- Tool registry (dispatch) ----
-TOOLS_IMPL = {
-    "list_dir": tool_list_dir,
-    "read_file": tool_read_file,
-    "read_many": tool_read_many,
-    "write_file": tool_write_file,
-    "delete_path": tool_delete_path,
-    "replace_in_file": tool_replace_in_file,
-}
+available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file]
 
-# ---- Tool schemas exposed to the model ----
-TOOLS_SPEC = [
-    {
-        "type": "function",
-        "name": "list_dir",
-        "description": "Recursively list files and directories under a path (relative to repo root), filtered by a glob. Can optionally include hidden entries.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Starting directory relative to repo root.",
-                    "default": ".",
-                },
-                "glob": {
-                    "type": "string",
-                    "description": "Glob pattern to filter results.",
-                    "default": "*",
-                },
-                "include_hidden": {
-                    "type": "boolean",
-                    "description": "Include hidden files/folders (names starting with '.').",
-                    "default": False,
-                },
-            },
-        },
-    },
-    {
-        "type": "function",
-        "name": "read_file",
-        "description": "Read up to `max_bytes` starting from `offset` from a single file under the repo root. Hidden file allowed. Returns UTF-8 text if possible, else Base64-encoded bytes.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "File path relative to repo root.",
-                },
-                "offset": {
-                    "type": "integer",
-                    "description": "Byte offset to start reading from.",
-                    "default": 0,
-                },
-                "max_bytes": {
-                    "type": "integer",
-                    "description": "Maximum number of bytes to read.",
-                    "default": 200_000,
-                    "minimum": 1,
-                },
-            },
-            "required": ["path"],
-        },
-    },
-    {
-        "type": "function",
-        "name": "write_file",
-        "description": "Create or overwrite a UTF-8 text file under the repo root.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Target file path relative to repo root.",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "UTF-8 text content to write.",
-                },
-                "overwrite": {
-                    "type": "boolean",
-                    "description": "If false and file exists, return an error.",
-                    "default": True,
-                },
-            },
-            "required": ["path", "content"],
-        },
-    },
-    {
-        "type": "function",
-        "name": "delete_path",
-        "description": "Delete a file or directory (recursively) under the repo root. Idempotent for missing paths; refuses to delete the repo root.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path relative to repo root to delete.",
-                },
-            },
-            "required": ["path"],
-        },
-    },
-    {
-        "type": "function",
-        "name": "replace_in_file",
-        "description": "Replace exactly one occurrence of `find` with `replace` in a UTF-8 text file. Fails if not found or not unique, or if find==replace.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "File path relative to repo root.",
-                },
-                "find": {
-                    "type": "string",
-                    "description": "Substring to locate (must occur exactly once).",
-                },
-                "replace": {
-                    "type": "string",
-                    "description": "Replacement substring (must differ from `find`).",
-                },
-            },
-            "required": ["path", "find", "replace"],
-        },
-    },
-]
+
+def get_available_tools():
+    impls, specs = dict(), list()
+    for tool in available_tools:
+        impls[tool.name] = tool
+
+        spec = dict(type="function", name=tool.name, description=tool.description,
+                    parameters=dict(type="object", properties=tool.properties))
+
+        if tool.required:
+            spec["parameters"]["required"] = tool.required
+
+        specs.append(spec)
+
+    return impls, specs
+
+
+# ---- Tool registry ----
+TOOLS_IMPL, TOOLS_SPEC = get_available_tools()
