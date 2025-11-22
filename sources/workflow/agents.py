@@ -1,16 +1,19 @@
 import json
+from abc import abstractmethod, ABC
+from pathlib import Path
 from time import sleep
+from typing import Any
 
 from openai import OpenAI, RateLimitError
-
 from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCall, ResponseReasoningItem, Response, \
     ResponseOutputText
 
 import logging_
-from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL
-from tools import TOOLS_SPEC, TOOLS_IMPL, tool_list_dir
+from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL, PROJECT_PATH
+from project_utils import ToolCallResult
 from prompts import GEN_NAME, GEN_SYS_PROMPT, DEB_NAME, DEB_SYS_PROMPT, DEB_PROMPT, EVAL_NAME, EVAL_SYS_PROMPT, \
     EVAL_PROMPT
+from tools import TOOLS_SPEC, TOOLS_IMPL, tool_list_dir
 
 MAX_STEPS = 50
 REDACT_MAX_PREVIEW = 120
@@ -79,7 +82,7 @@ def _redact_tool_result(name: str, result: dict) -> dict:
     return result
 
 
-class Agent:
+class Agent(ABC):
     type_ = "agent"
 
     def __init__(self, model: str, name: str, sys_prompt: str, req_output: str = None):
@@ -92,7 +95,14 @@ class Agent:
         self._logger.debug(f"System prompt: {_preview(repr(self._sys_prompt))}")
         self._messages = [{"role": "system", "content": self._sys_prompt}]
 
-    def _handle_tool_call(self, tool_call: ResponseFunctionToolCall):
+    @abstractmethod
+    def _handle_end_conv_attempt(self, final_text: str) -> tuple[ToolCallResult, Any]:
+        ...
+
+    def _handle_tool_call(self, tool_call: ResponseFunctionToolCall) -> ToolCallResult:
+        """ Handles a tool call by the agent. Returns the ToolCallResult."""
+        end: ToolCallResult
+
         # get function & arguments
         name = tool_call.name
         args = json.loads(tool_call.arguments or "{}")
@@ -102,9 +112,16 @@ class Agent:
         try:
             result = TOOLS_IMPL[name](**args)
             self._logger.info(f"[TOOL RESULT] - {name} -> {_redact_tool_result(name, result)}")
+            end = ToolCallResult.CALL_SUCCEEDED
+
+            # handle attempt to end conversation
+            if name == "end_conversation":
+                end, result = self._handle_end_conv_attempt(result)
+
         except Exception as e:
             result = {"error": str(e)}
             self._logger.error(f"[TOOL ERROR] - {name} failed: {e}")
+            end = ToolCallResult.CALL_ERROR
 
         # append function call & response
         self._messages.append({
@@ -112,6 +129,8 @@ class Agent:
             "call_id": tool_call.call_id,
             "output": json.dumps(result)
         })
+
+        return end
 
     def query(self, instruction: str):
         self._logger.info(f"Calling with instruction: {_preview(repr(instruction))}")
@@ -179,7 +198,10 @@ class Agent:
                     self._logger.info(f"[REASONING] - summary: {content.summary}, content: {content.content}")
 
                 elif isinstance(content, ResponseFunctionToolCall):
-                    self._handle_tool_call(content)
+                    end = self._handle_tool_call(content)
+                    if end in [ToolCallResult.END_ACCEPTED, ToolCallResult.END_FINAL_SUITE,
+                               ToolCallResult.END_REWORK_REQ]:
+                        return end
 
                 else:
                     self._logger.debug(f"[EVENT] - {content}")
@@ -193,6 +215,14 @@ class Generator(Agent):
     def __init__(self, iteration):
         super().__init__(GEN_MODEL, GEN_NAME + f" #{iteration:02d}", GEN_SYS_PROMPT)
 
+    def _handle_end_conv_attempt(self, final_text: str):
+        """ Returns END_ACCEPTED if <DONE> was sent else END_REJECTED. """
+        if final_text != "<DONE>":
+            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
+                                                     reason="Only <DONE> as final_text expected.")
+
+        return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
+
 
 class Debugger(Agent):
     type_ = DEB_NAME.lower()
@@ -203,6 +233,18 @@ class Debugger(Agent):
     def query(self):
         return super().query(DEB_PROMPT)
 
+    def _handle_end_conv_attempt(self, final_text: str):
+        """ Returns END_ACCEPTED if <DONE> was sent and fixes.md exists else END_REJECTED. """
+        if final_text != "<DONE>":
+            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
+                                                     reason="Only <DONE> as final_text expected.")
+
+        if not Path(PROJECT_PATH / "fixes.md").exists():
+            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
+                                                     reason="Expected output `fixes.md` missing.")
+
+        return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
+
 
 class Evaluator(Agent):
     type_ = EVAL_NAME.lower()
@@ -212,3 +254,17 @@ class Evaluator(Agent):
 
     def query(self):
         return super().query(EVAL_PROMPT)
+
+    def _handle_end_conv_attempt(self, final_text: str):
+        """ Returns END_REJECTED if <DONE> was not sent or fixes.md doesn't exist else (END_FINAL_SUITE if <FINAL> else END_REWORK_REQ). """
+        if final_text not in ["<REWORK>", "<FINAL>"]:
+            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
+                                                     reason="Only <REWORK> or <FINAL> as final_text expected.")
+
+        if not Path(PROJECT_PATH / "evaluation.md").exists():
+            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
+                                                     reason="Expected output `evaluation.md` missing.")
+
+        if final_text == "<FINAL>":
+            return ToolCallResult.END_FINAL_SUITE, dict(conversation_end=True)
+        return ToolCallResult.END_REWORK_REQ, dict(conversation_end=True)

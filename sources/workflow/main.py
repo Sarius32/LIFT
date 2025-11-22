@@ -1,5 +1,5 @@
-import logging_
 import env
+import logging_
 
 env.log()
 
@@ -7,7 +7,8 @@ LOGGER = logging_.get_logger(__name__)
 
 from agents import Generator, Evaluator, Debugger
 from prompts import GEN_INIT_PROMPT, GEN_REFINE_PROMPT, GEN_ERROR_PROMPT
-from utils import archive_tests, archive_exec_eval, create_new_project, execute_tests, archive_first_final_suite, \
+from project_utils import ToolCallResult
+from utils import archive_tests, archive_exec_eval, execute_tests, archive_first_final_suite, \
     archive_last_passing_suite, archive_agent
 
 
@@ -50,7 +51,7 @@ def main():
             archive_agent(evaluator, iteration)
 
             # archive FSS (First Sufficient Suite)
-            if evaluation == "<FINAL>" and first_final:
+            if evaluation == ToolCallResult.END_FINAL_SUITE and first_final:
                 archive_first_final_suite(iteration)
                 first_final = False
 
