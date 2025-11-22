@@ -357,6 +357,15 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
 
 
 @tool_metadata(
+    description="Get the ids of all available requirements.",
+    properties={}
+)
+def tool_get_all_requirement_ids():
+    """ Returns all requirement ids. """
+    return REQUIREMENTS.keys()
+
+
+@tool_metadata(
     description="Get the details of a requirement based on its identifier.",
     properties={"identifier": {"type": "string", "description": "Requirement identifier (id)."}},
     required=["identifier"]
@@ -381,7 +390,7 @@ def tool_end_conversation(final_text: str):
 
 
 available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file,
-                   tool_get_requirement_data, tool_end_conversation]
+                   tool_get_all_requirement_ids, tool_get_requirement_data, tool_end_conversation]
 
 
 def get_available_tools():
