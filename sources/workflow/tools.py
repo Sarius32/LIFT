@@ -357,6 +357,20 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
 
 
 @tool_metadata(
+    description="Get the details of a requirement based on its identifier.",
+    properties={"identifier": {"type": "string", "description": "Requirement identifier (id)."}},
+    required=["identifier"]
+)
+def tool_get_requirement_data(identifier: str):
+    """ Returns the requirement details based on its identifier (if available). """
+    if identifier not in REQUIREMENTS.keys():
+        return {"error": "identifier_unknown"}
+
+    req_dict = asdict(REQUIREMENTS[identifier])
+    return req_dict
+
+
+@tool_metadata(
     description="Calling this function indicates the intent to end the conversation after completing all tasks. "
                 "Fails if a required output is missing or the final_text is not a valid value.",
     properties={"final_text": {"type": "string", "description": "The final text of the conversation."}},
@@ -367,7 +381,7 @@ def tool_end_conversation(final_text: str):
 
 
 available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file,
-                   tool_end_conversation]
+                   tool_get_requirement_data, tool_end_conversation]
 
 
 def get_available_tools():
