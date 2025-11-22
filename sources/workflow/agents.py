@@ -16,6 +16,7 @@ from prompts import GEN_NAME, GEN_SYS_PROMPT, DEB_NAME, DEB_SYS_PROMPT, DEB_PROM
 from tools import TOOLS_SPEC, TOOLS_IMPL, tool_list_dir
 
 MAX_STEPS = 50
+MAX_RETRIES = 5
 REDACT_MAX_PREVIEW = 120
 
 
@@ -137,10 +138,9 @@ class Agent(ABC):
         self._messages.append({"role": "user", "content": instruction})
 
         client = OpenAI(api_key=API_KEY)
-        not_exit = 0
         for step in range(MAX_STEPS):
             response = None
-            for _ in range(5):
+            for retry in range(MAX_RETRIES):
                 try:
                     response: Response = client.responses.create(
                         model=self._model, input=self._messages,
@@ -154,45 +154,25 @@ class Agent(ABC):
                     wait = 5
                     if "m" not in time:
                         wait += float(time.replace("m", ""))
-                    self._logger.info(f"[RETRY] - Waiting for {wait:.2f} secs")
+                    self._logger.info(f"[RETRY #{retry}] - Waiting for {wait:.2f} secs")
                     sleep(wait)
-                    self._logger.info(f"[RETRY] - Waited for {wait:.2f} secs")
+                    self._logger.info(f"[RETRY #{retry}] - Waited for {wait:.2f} secs")
 
             if response is None:
                 raise Exception("No response from model to process!")
 
-            self._logger.info(f"[STATE] - Total tokens used: {response.usage.total_tokens}")
+            self._logger.info(f"[STATE #{step}] - Total tokens used: {response.usage.total_tokens}")
 
             for content in response.output:
                 self._messages.append(content)
 
                 if isinstance(content, ResponseOutputMessage):
-                    for c in content.content:
-                        if isinstance(c, ResponseOutputText):
-                            self._logger.info(f"[RESPONSE MESSAGE] - {c.text}")
-
-                            if c.text in ["<DONE>", "<FINAL>", "<REWORK>"]:  # Conversation End found
-                                if self._req_output:
-                                    entries = tool_list_dir(glob=self._req_output)["entries"]
-                                    if any([self._req_output in e["path"] for e in entries]) or not_exit > 4:
-                                        return c.text
-                                    else:
-                                        self._messages.append({"role": "user",
-                                                               "content": f"Expected output `{self._req_output}` was not found/created. Do that before finishing the task!"})
-                                        self._logger.info(
-                                            f"[CONTINUATION] - The exit was rejected since the required output `{self._req_output}` was not created.")
-                                        not_exit += 1
-                                        continue
-                                return c.text
-
-                            if "<DONE>" in c.text or "<FINAL>" in c.text or "<REWORK>" in c.text:  # Conversation End
-                                self._messages.append({"role": "user",
-                                                       "content": "If you deem your task to be completed, please only send `<DONE>` or `<FINAL>` or `<REWORK>`!"})
-                                self._logger.info(
-                                    f"[CONTINUATION] - Exit flag found in larger text message. Forcing correct format!")
-
+                    message = content
+                    for m_content in message.content:
+                        if isinstance(m_content, ResponseOutputText):
+                            self._logger.info(f"[RESPONSE MESSAGE] - {m_content.text}")
                         else:
-                            self._logger.info(f"[RESPONSE MESSAGE REFUSAL] - {c.refusal}")
+                            self._logger.info(f"[RESPONSE MESSAGE REFUSAL] - {m_content.refusal}")
 
                 elif isinstance(content, ResponseReasoningItem):
                     self._logger.info(f"[REASONING] - summary: {content.summary}, content: {content.content}")
@@ -206,7 +186,7 @@ class Agent(ABC):
                 else:
                     self._logger.debug(f"[EVENT] - {content}")
 
-        return ""
+        raise Exception(f"Conversation didn't terminate within {MAX_STEPS} steps!")
 
 
 class Generator(Agent):
@@ -218,9 +198,11 @@ class Generator(Agent):
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_ACCEPTED if <DONE> was sent else END_REJECTED. """
         if final_text != "<DONE>":
+            self._logger.info(f"[CONTINUATION] - End message different than <DONE> found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Only <DONE> as final_text expected.")
 
+        self._logger.info(f"[AGENT CHAT END] - {final_text}")
         return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
 
 
@@ -236,13 +218,16 @@ class Debugger(Agent):
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_ACCEPTED if <DONE> was sent and fixes.md exists else END_REJECTED. """
         if final_text != "<DONE>":
+            self._logger.info(f"[CONTINUATION] - End message different than <DONE> found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Only <DONE> as final_text expected.")
 
         if not Path(PROJECT_PATH / "fixes.md").exists():
+            self._logger.info(f"[CONTINUATION] - Expected output fixes.md not found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Expected output `fixes.md` missing.")
 
+        self._logger.info(f"[AGENT CHAT END] - {final_text}")
         return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
 
 
@@ -258,13 +243,18 @@ class Evaluator(Agent):
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_REJECTED if <DONE> was not sent or fixes.md doesn't exist else (END_FINAL_SUITE if <FINAL> else END_REWORK_REQ). """
         if final_text not in ["<REWORK>", "<FINAL>"]:
+            self._logger.info(f"[CONTINUATION] - End message different than <REWORK> or <FINAL> found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Only <REWORK> or <FINAL> as final_text expected.")
 
         if not Path(PROJECT_PATH / "evaluation.md").exists():
+            self._logger.info(f"[CONTINUATION] - Expected output evaluation.md not found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Expected output `evaluation.md` missing.")
 
         if final_text == "<FINAL>":
+            self._logger.info(f"[AGENT CHAT END] - {final_text}")
             return ToolCallResult.END_FINAL_SUITE, dict(conversation_end=True)
+
+        self._logger.info(f"[AGENT CHAT END] - {final_text}")
         return ToolCallResult.END_REWORK_REQ, dict(conversation_end=True)
