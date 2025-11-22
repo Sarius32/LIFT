@@ -1,9 +1,26 @@
-import base64, shutil
+import base64
+import shutil
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 
-from env import PROJECT_PATH
+import yaml
+
+from env import PROJECT_PATH, DATA_PATH
 from project_utils import tool_metadata
+from requirements import Requirement, extract_reqs_from_yaml
+
+
+def get_requirements() -> Dict[str, Requirement]:
+    with open(DATA_PATH / "program-requirements.yml") as req_file:
+        req_data = yaml.safe_load(req_file)
+
+    reqs = extract_reqs_from_yaml(req_data)
+
+    return {req.id: req for req in reqs}
+
+
+REQUIREMENTS = get_requirements()
 
 
 def safe_path(rel: str) -> Optional[Path]:
