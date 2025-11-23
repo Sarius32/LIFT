@@ -1,5 +1,5 @@
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -9,22 +9,66 @@ class Requirement:
     description: str
     acceptance: str
 
+    def to_dict(self):
+        dict_ = OrderedDict()
+        dict_["id"] = self.id
+        dict_["title"] = self.title
+        dict_["description"] = self.description
+        dict_["acceptance"] = self.acceptance
+        return dict_
 
-def extract_reqs_from_yaml(obj: dict) -> List[Requirement]:
-    """ Recursively collect Requirements in yaml input based on 'id' key. """
-    found = []
 
-    if isinstance(obj, dict):
-        # If this dict *is* a requirement
-        if "id" in obj:
-            found.append(Requirement(**obj))
+@dataclass
+class ReqScope:
+    title: str
+    scopes: list["ReqScope"] | None
+    reqs: list[Requirement] | None
 
-        # Recurse into values
-        for value in obj.values():
-            found.extend(extract_reqs_from_yaml(value))
+    @staticmethod
+    def parse_yaml(yaml_data: list[dict] | dict) -> "ReqScope | None":
+        for key, value in yaml_data.items():
+            title = key
+            scopes, reqs = None, None
+            if isinstance(value, dict):
+                scopes = [ReqScope.parse_yaml({k: v}) for k, v in value.items()]
+            elif isinstance(value, list):
+                reqs = [Requirement(**item) for item in value]
 
-    elif isinstance(obj, list):
-        for item in obj:
-            found.extend(extract_reqs_from_yaml(item))
+            return ReqScope(title, scopes, reqs)
 
-    return found
+        return None
+
+    def to_dict(self):
+        dict_ = OrderedDict()
+        dict_["title"] = self.title
+        if self.scopes:
+            scope_dict = OrderedDict()
+            for scope in self.scopes:
+                scope_dict[scope.title] = scope.to_dict()
+            dict_["scopes"] = scope_dict
+        else:
+            dict_["reqs"] = [req.to_dict() for req in self.reqs]
+
+        return dict_
+
+    def get_requirements(self) -> list[Requirement]:
+        if self.reqs:
+            return self.reqs
+
+        reqs = []
+        [reqs.extend(scope.get_requirements()) for scope in self.scopes]
+        return reqs
+
+    def find_requirement(self, id: str) -> Requirement | None:
+        if self.reqs:
+            for req in self.reqs:
+                if req.id == id:
+                    return req
+
+        if self.scopes:
+            for scope in self.scopes:
+                req = scope.find_requirement(id)
+                if req:
+                    return req
+
+        return None

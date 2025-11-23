@@ -1,6 +1,5 @@
 import base64
 import shutil
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 
@@ -8,19 +7,11 @@ import yaml
 
 from env import PROJECT_PATH, DATA_PATH
 from project_utils import tool_metadata
-from requirements import Requirement, extract_reqs_from_yaml
+from requirements import ReqScope, Requirement
 
-
-def get_requirements() -> Dict[str, Requirement]:
-    with open(DATA_PATH / "program-requirements.yml") as req_file:
-        req_data = yaml.safe_load(req_file)
-
-    reqs = extract_reqs_from_yaml(req_data)
-
-    return {req.id: req for req in reqs}
-
-
-REQUIREMENTS = get_requirements()
+with open(DATA_PATH / "program-requirements.yml") as req_file:
+    req_data = yaml.safe_load(req_file)
+REQUIREMENTS = ReqScope.parse_yaml(req_data)
 
 
 def safe_path(rel: str) -> Optional[Path]:
@@ -357,12 +348,21 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
 
 
 @tool_metadata(
+    description="Get all requirements (incl. id, title, description and acceptance) (structured).",
+    properties={}
+)
+def tool_get_all_requirements() -> dict:
+    """ Returns the ordered dict of all requirements (structured by scopes). """
+    return REQUIREMENTS.to_dict()
+
+
+@tool_metadata(
     description="Get the ids of all available requirements.",
     properties={}
 )
 def tool_get_all_requirement_ids():
     """ Returns all requirement ids. """
-    return REQUIREMENTS.keys()
+    return [req.id for req in REQUIREMENTS.get_requirements()]
 
 
 @tool_metadata(
@@ -372,11 +372,11 @@ def tool_get_all_requirement_ids():
 )
 def tool_get_requirement_data(identifier: str):
     """ Returns the requirement details based on its identifier (if available). """
-    if identifier not in REQUIREMENTS.keys():
+    req = REQUIREMENTS.find_requirement(identifier)
+    if req is None:
         return {"error": "identifier_unknown"}
 
-    req_dict = asdict(REQUIREMENTS[identifier])
-    return req_dict
+    return req.to_dict()
 
 
 @tool_metadata(
@@ -390,7 +390,8 @@ def tool_end_conversation(final_text: str):
 
 
 available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file,
-                   tool_get_all_requirement_ids, tool_get_requirement_data, tool_end_conversation]
+                   tool_get_all_requirements, tool_get_all_requirement_ids, tool_get_requirement_data,
+                   tool_end_conversation]
 
 
 def get_available_tools():
