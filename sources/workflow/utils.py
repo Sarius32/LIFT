@@ -8,6 +8,7 @@ import shutil, subprocess, sys
 
 from agents import Agent
 from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH
+from requirements import parse_requirements_doc, get_requirements_only
 
 
 def setup_new_project() -> None:
@@ -26,27 +27,16 @@ def setup_new_project() -> None:
     # copy PUT
     shutil.copytree(input_put_path, PUT_PATH)
 
-    # copy eval template and requirements
-    shutil.copy((DATA_PATH / "evaluation_template.md"), (PROJECT_PATH / "evaluation_template.md"))
-    shutil.copy((DATA_PATH / "program-requirements.yml"), (PROJECT_PATH / "program-requirements.yml"))
+    # copy eval template
+    shutil.copy(eval_template, (PROJECT_PATH / "evaluation_template.md"))
+
+    # parse the requirements for later tool use (requirements doc not provided to agents directly)
+    parse_requirements_doc(req_document)
+    reqs = get_requirements_only()
 
     # load pytest html report template
     with open(DATA_PATH / "pytest_html_report.yml") as file:
         lines = file.readlines()
-
-    # extract requirement IDs and titles from requirements doc
-    reqs = {}
-    with open(DATA_PATH / "program-requirements.yml") as file:
-        req_id = None
-        for line in file.readlines():
-            if "- id: " in line:
-                req_id = line.split("- id: ")[-1].strip()
-                continue
-
-            if "title: " in line and req_id is not None:
-                reqs[req_id] = line.split("title: ")[-1].strip()
-                req_id = None
-                continue
 
     # create filled pytest HTML report config with report dir and requirements
     new_lines = []
@@ -55,7 +45,7 @@ def setup_new_project() -> None:
             new_lines.append(f"  report_dir: {REPORTS_PATH}")
             continue
         if "<<REQUIREMENT_IDS>>" in line:
-            [new_lines.append(f"  {id_}: \"{title}\"") for id_, title in sorted(reqs.items(), key=lambda v: v[0])]
+            [new_lines.append(f"  {req.id}: \"{req.title}\"") for req in reqs]
             continue
         new_lines.append(line)
     with open(PROJECT_PATH / "pytest_html_report.yml", "w") as file:
