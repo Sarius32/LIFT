@@ -1,5 +1,8 @@
 from collections import OrderedDict
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
 
 
 @dataclass
@@ -72,3 +75,22 @@ class ReqScope:
                     return req
 
         return None
+
+
+_REQUIREMENTS: ReqScope
+
+
+def parse_requirements_doc(file_path: Path) -> None:
+    global _REQUIREMENTS
+
+    with open(file_path) as req_file:
+        req_data = yaml.safe_load(req_file)
+    _REQUIREMENTS = ReqScope.parse_yaml(req_data)
+
+
+def get_structured_reqs():
+    return _REQUIREMENTS
+
+
+def get_requirements_only():
+    return _REQUIREMENTS.get_requirements()
