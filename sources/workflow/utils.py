@@ -17,12 +17,32 @@ def setup_new_project() -> None:
         LOGGER.error(f"LIFT folder already exists. No need LIFT process started!")
         exit(-1)
 
-    # create & fill project folder
-    PROJECT_PATH.mkdir()
+    # PUT is missing
     input_put_path = (DATA_PATH / PUT_NAME).resolve()
     if not input_put_path.exists() or not input_put_path.is_dir():
         LOGGER.error(f"PUT {PUT_NAME} for LIFT not found in {DATA_PATH}!")
         exit(-1)
+
+    # Evaluation template is missing
+    eval_template = DATA_PATH / "evaluation_template.md"
+    if not eval_template.exists():
+        LOGGER.error(f"Evaluation template (evaluation_template.md) not found in {DATA_PATH}!")
+        exit(-1)
+
+    # Requirements document is missing
+    req_document = DATA_PATH / "program-requirements.yml"
+    if not req_document.exists():
+        LOGGER.error(f"Program requirements (program-requirements.yml) not found in {DATA_PATH}!")
+        exit(-1)
+
+    # PyTest HTML Report Config is missing
+    pytest_html_report = DATA_PATH / "pytest_html_report.yml"
+    if not pytest_html_report.exists():
+        LOGGER.error(f"PyTest HTML Report Config (pytest_html_report.yml) not found in {DATA_PATH}!")
+        exit(-1)
+
+    # create project folder
+    PROJECT_PATH.mkdir()
 
     # copy PUT
     shutil.copytree(input_put_path, PUT_PATH)
@@ -35,7 +55,7 @@ def setup_new_project() -> None:
     reqs = get_requirements_only()
 
     # load pytest html report template
-    with open(DATA_PATH / "pytest_html_report.yml") as file:
+    with open(pytest_html_report) as file:
         lines = file.readlines()
 
     # create filled pytest HTML report config with report dir and requirements
