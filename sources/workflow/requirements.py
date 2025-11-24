@@ -39,7 +39,7 @@ class ReqScope:
 
             return ReqScope(title, scopes, reqs)
 
-        return None
+        raise Exception("Invalid requirements yaml configuration")
 
     def to_dict(self):
         dict_ = OrderedDict()
