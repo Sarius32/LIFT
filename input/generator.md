@@ -134,7 +134,7 @@ Each test needs to follow this template:
     functional_specification=<covered requirement id(s) (list[str], default: [])>,
     test_description=<short description of the test behavior/goal (str)>
 )
-@pytest.mark.category(<test category like "unit", "integration", "system" (str or list[str])>)
+@pytest.mark.category(<test category like "unit", "integration", "system" (str)>)
 def <descriptive test name>(<parameters>):
     <test logic>
 ```
