@@ -3,15 +3,9 @@ import shutil
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 
-import yaml
-
-from env import PROJECT_PATH, DATA_PATH
+from env import PROJECT_PATH
 from project_utils import tool_metadata
-from requirements import ReqScope, Requirement
-
-with open(DATA_PATH / "program-requirements.yml") as req_file:
-    req_data = yaml.safe_load(req_file)
-REQUIREMENTS = ReqScope.parse_yaml(req_data)
+from requirements import get_structured_reqs, get_requirements_only
 
 
 def safe_path(rel: str) -> Optional[Path]:
@@ -353,7 +347,7 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
 )
 def tool_get_all_requirements() -> dict:
     """ Returns the ordered dict of all requirements (structured by scopes). """
-    return REQUIREMENTS.to_dict()
+    return get_structured_reqs().to_dict()
 
 
 @tool_metadata(
@@ -362,7 +356,7 @@ def tool_get_all_requirements() -> dict:
 )
 def tool_get_all_requirement_ids():
     """ Returns all requirement ids. """
-    return [req.id for req in REQUIREMENTS.get_requirements()]
+    return [req.id for req in get_requirements_only()]
 
 
 @tool_metadata(
@@ -372,7 +366,7 @@ def tool_get_all_requirement_ids():
 )
 def tool_get_requirement_data(identifier: str):
     """ Returns the requirement details based on its identifier (if available). """
-    req = REQUIREMENTS.find_requirement(identifier)
+    req = get_structured_reqs().find_requirement(identifier)
     if req is None:
         return {"error": "identifier_unknown"}
 
