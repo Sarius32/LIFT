@@ -46,7 +46,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "LIFT Release ${{ github.ref_name }}"
           body: |
-            Automated build of the Docker image for release ${{ github.ref_name }} from commit ${{ env.sha_short }}.
+            Automated build of the Docker image for Release ${{ github.ref_name }} from commit ${{ env.sha_short }}.
             Contains the latest workflow and dependencies.
           files: lift-image.tar
         env:
