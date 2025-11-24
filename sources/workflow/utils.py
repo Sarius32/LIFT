@@ -10,7 +10,7 @@ from agents import Agent
 from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH
 
 
-def create_new_project() -> None:
+def setup_new_project() -> None:
     # archive existing
     if PROJECT_PATH.exists():
         LOGGER.error(f"LIFT folder already exists. No need LIFT process started!")
