@@ -9,11 +9,11 @@ from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCa
     ResponseOutputText
 
 import logging_
-from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL, PROJECT_PATH
+from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL, PROJECT_PATH, REPORTS_PATH
 from project_utils import ToolCallResult
 from prompts import GEN_NAME, GEN_SYS_PROMPT, DEB_NAME, DEB_SYS_PROMPT, DEB_PROMPT, EVAL_NAME, EVAL_SYS_PROMPT, \
     EVAL_PROMPT
-from tools import TOOLS_SPEC, TOOLS_IMPL, tool_list_dir
+from tools import TOOLS_SPEC, TOOLS_IMPL
 
 MAX_STEPS = 50
 MAX_RETRIES = 5
@@ -86,12 +86,11 @@ def _redact_tool_result(name: str, result: dict) -> dict:
 class Agent(ABC):
     type_ = "agent"
 
-    def __init__(self, model: str, name: str, sys_prompt: str, req_output: str = None):
+    def __init__(self, model: str, name: str, sys_prompt: str):
         self._model = model
 
         self._logger = logging_.get_logger("AGENT " + name)
         self._sys_prompt = sys_prompt
-        self._req_output = req_output
 
         self._logger.debug(f"System prompt: {_preview(repr(self._sys_prompt))}")
         self._messages = [{"role": "system", "content": self._sys_prompt}]
@@ -210,7 +209,7 @@ class Debugger(Agent):
     type_ = DEB_NAME.lower()
 
     def __init__(self, iteration):
-        super().__init__(DEBUG_MODEL, DEB_NAME + f" #{iteration:02d}", DEB_SYS_PROMPT, "fixes.md")
+        super().__init__(DEBUG_MODEL, DEB_NAME + f" #{iteration:02d}", DEB_SYS_PROMPT)
 
     def query(self):
         return super().query(DEB_PROMPT)
@@ -222,7 +221,7 @@ class Debugger(Agent):
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Only <DONE> as final_text expected.")
 
-        if not Path(PROJECT_PATH / "fixes.md").exists():
+        if not Path(REPORTS_PATH / "fixes.md").exists():
             self._logger.info(f"[CONTINUATION] - Expected output fixes.md not found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Expected output `fixes.md` missing.")
@@ -235,7 +234,7 @@ class Evaluator(Agent):
     type_ = EVAL_NAME.lower()
 
     def __init__(self, iteration):
-        super().__init__(EVAL_MODEL, EVAL_NAME + f" #{iteration:02d}", EVAL_SYS_PROMPT, "evaluation.md")
+        super().__init__(EVAL_MODEL, EVAL_NAME + f" #{iteration:02d}", EVAL_SYS_PROMPT)
 
     def query(self):
         return super().query(EVAL_PROMPT)
@@ -247,7 +246,7 @@ class Evaluator(Agent):
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Only <REWORK> or <FINAL> as final_text expected.")
 
-        if not Path(PROJECT_PATH / "evaluation.md").exists():
+        if not Path(REPORTS_PATH / "evaluation.md").exists():
             self._logger.info(f"[CONTINUATION] - Expected output evaluation.md not found.")
             return ToolCallResult.END_REJECTED, dict(conversation_end=False,
                                                      reason="Expected output `evaluation.md` missing.")
