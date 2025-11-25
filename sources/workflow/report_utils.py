@@ -63,7 +63,7 @@ class TestSuite:
             tests_total=int(suite.get("tests")),
             tests_failed=int(suite.get("failures")),
             tests_skipped=int(suite.get("skipped")),
-            tests=[TestCase.parse(it) for it in suite.findall("testcase")],
+            tests=[TestCase.parse(it) for it in suite.findall("testcase") if it.get("error") is not None],
         )
 
     def get_tests_with_incorrect_req_ids(self, all_reqs: list[Requirement]) -> list[TestCase]:
