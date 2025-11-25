@@ -10,5 +10,3 @@ categories:
   unit: "Unit Tests"
   integration: "Integration Tests"
   system: "System Tests"
-  regression: "Regression Tests"
-  mutation: "Mutation Tests"
