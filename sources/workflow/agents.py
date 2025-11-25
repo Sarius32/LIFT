@@ -111,12 +111,13 @@ class Agent(ABC):
         # actually call function
         try:
             result = TOOLS_IMPL[name](**args)
-            self._logger.info(f"[TOOL RESULT] - {name} -> {_redact_tool_result(name, result)}")
-            end = ToolCallResult.CALL_SUCCEEDED
 
             # handle attempt to end conversation
             if name == "end_conversation":
                 end, result = self._handle_end_conv_attempt(result)
+            else:
+                self._logger.info(f"[TOOL RESULT] - {name} -> {_redact_tool_result(name, result)}")
+                end = ToolCallResult.CALL_SUCCEEDED
 
         except Exception as e:
             result = {"error": str(e)}
