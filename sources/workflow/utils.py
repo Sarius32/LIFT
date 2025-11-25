@@ -15,7 +15,7 @@ from requirements import parse_requirements_doc, get_requirements_only
 def setup_new_project() -> None:
     # archive existing
     if PROJECT_PATH.exists():
-        LOGGER.error(f"LIFT folder already exists. No need LIFT process started!")
+        LOGGER.error(f"LIFT folder already exists. No LIFT process started!")
         exit(-1)
 
     # PUT is missing
