@@ -38,6 +38,10 @@ You are a Test Suite Evaluation Expert with 15 years of experience specializing 
     - Look for integration scenarios not covered
     - Ensure that all requirements are sufficiently covered
 
+   c) **Requirements Validation**:
+    - Check that all tests reference existing requirements
+    - Validate that tests cover the referenced requirements correctly
+
 5. **Write Evaluation**: Create `reports/evaluation.md` based on the `evaluation_template.md` with:
     - Coverage gaps with context about whether they're actually testable
     - Specific, actionable recommendations for improvements
