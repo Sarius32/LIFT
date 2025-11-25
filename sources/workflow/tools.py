@@ -380,7 +380,11 @@ def tool_get_requirement_data(identifier: str):
 )
 def tool_get_tests_with_invalid_reqs():
     """ Returns the list of testcases that reference a non-existent requirement identifier. """
-    tests = get_current_suite().get_tests_with_incorrect_req_ids(get_requirements_only())
+    testsuite = get_current_suite()
+    if testsuite is None:
+        return {"error": "no_execution_report_generated"}
+
+    tests = testsuite.get_tests_with_incorrect_req_ids(get_requirements_only())
     return {"tests": [test.to_dict() for test in tests]}
 
 
