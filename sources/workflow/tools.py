@@ -5,6 +5,7 @@ from typing import Any, Optional, Dict, List
 
 from env import PROJECT_PATH
 from project_utils import tool_metadata
+from report_utils import get_current_suite
 from requirements import get_structured_reqs, get_requirements_only
 
 
@@ -374,6 +375,16 @@ def tool_get_requirement_data(identifier: str):
 
 
 @tool_metadata(
+    description="Get all test cases that include a reference to a non-existent requirement.",
+    properties={}
+)
+def tool_get_tests_with_invalid_reqs():
+    """ Returns the list of testcases that reference a non-existent requirement identifier. """
+    tests = get_current_suite().get_tests_with_incorrect_req_ids(get_requirements_only())
+    return {"tests": [test.to_dict() for test in tests]}
+
+
+@tool_metadata(
     description="Calling this function indicates the intent to end the conversation after completing all tasks. "
                 "Fails if a required output is missing or the final_text is not a valid value.",
     properties={"final_text": {"type": "string", "description": "The final text of the conversation."}},
@@ -385,7 +396,7 @@ def tool_end_conversation(final_text: str):
 
 available_tools = [tool_list_dir, tool_read_file, tool_write_file, tool_delete_path, tool_replace_in_file,
                    tool_get_all_requirements, tool_get_all_requirement_ids, tool_get_requirement_data,
-                   tool_end_conversation]
+                   tool_get_tests_with_invalid_reqs, tool_end_conversation]
 
 
 def get_available_tools():

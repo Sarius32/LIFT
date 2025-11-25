@@ -8,6 +8,7 @@ import shutil, subprocess, sys
 
 from agents import Agent
 from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH
+from report_utils import parse_cur_exec_report
 from requirements import parse_requirements_doc, get_requirements_only
 
 
@@ -140,13 +141,19 @@ def rm_report_temps() -> None:
 
 
 def execute_tests() -> bool:
-    """ Returns True if all tests passed """
+    """ Executes the current state of the test suite and parses the generated report. Returns True if all tests passed. """
+    exec_report_file = (REPORTS_PATH / 'execution-report.xml')
+
+    # execute pytest as a subprocess
     e = subprocess.run([sys.executable, "-m", "pytest", PROJECT_PATH.absolute(),
                         f"--rootdir={PROJECT_PATH.absolute()}",
                         f"--cache-clear", f"--disable-warnings",
-                        f"--junit-xml={(REPORTS_PATH / 'execution-report.xml').absolute()}",
+                        f"--junit-xml={exec_report_file.absolute()}",
                         f"--cov={PUT_NAME}", f"--cov-branch",
                         f"--cov-report=xml:{(REPORTS_PATH / 'coverage-report.xml').absolute()}"])
+
+    # parse the last execution report
+    parse_cur_exec_report(exec_report_file)
 
     # remove pytest-html-report temp files
     rm_report_temps()
