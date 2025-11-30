@@ -24,7 +24,7 @@ def _setup_env():
         LOGGER.error(".env file not found at ./input/.env!\nLIFT requires .env file in this location!")
         exit(-1)
 
-    load_dotenv(Path("./input/.env"), verbose=True)
+    load_dotenv(env_file, verbose=True)
 
     required_vars = {
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
