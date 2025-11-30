@@ -67,6 +67,7 @@ LIFT_PATH = Path("").resolve()
 LIFT_ARCHIVE = (LIFT_PATH / ".archive").resolve()
 ARCHIVE_CON = (LIFT_ARCHIVE / "conversations").resolve()
 DATA_PATH = Path(LIFT_PATH / "input").resolve()
+CONFIG_PATH = Path(LIFT_PATH / "config").resolve()
 
 # Project Paths
 PROJECT_PATH = Path(LIFT_PATH / "project").resolve()

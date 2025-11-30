@@ -7,7 +7,8 @@ LOGGER = logging_.get_logger(__name__)
 import shutil, subprocess, sys
 
 from agents import Agent
-from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH
+from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH, \
+    CONFIG_PATH
 from report_utils import parse_cur_exec_report
 from requirements import parse_requirements_doc, get_requirements_only
 
@@ -63,14 +64,15 @@ def setup_new_project() -> None:
     new_lines = []
     for line in lines:
         if "<<REPORT_DIR>>" in line:
-            new_lines.append(f"  report_dir: {REPORTS_PATH}")
+            new_lines.append(f"  report_dir: \"{REPORTS_PATH}\"\n")
             continue
         if "<<REQUIREMENT_IDS>>" in line:
-            [new_lines.append(f"  {req.id}: \"{req.title}\"") for req in reqs]
+            [new_lines.append(f"  {req.id}: \"{req.title}\"\n") for req in reqs]
             continue
         new_lines.append(line)
-    with open(PROJECT_PATH / "pytest_html_report.yml", "w") as file:
-        file.writelines(lines)
+    CONFIG_PATH.mkdir(exist_ok=True)
+    with open(CONFIG_PATH / "pytest_html_report.yml", "w") as file:
+        file.writelines(new_lines)
 
     # create archive & project folders
     LIFT_ARCHIVE.mkdir(exist_ok=True)
