@@ -357,7 +357,7 @@ def tool_get_all_requirements() -> dict:
 )
 def tool_get_all_requirement_ids():
     """ Returns all requirement ids. """
-    return [req.id for req in get_requirements_only()]
+    return {"req_ids": [req.id for req in get_requirements_only()]}
 
 
 @tool_metadata(
