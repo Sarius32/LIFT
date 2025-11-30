@@ -196,12 +196,7 @@ class Generator(Agent):
         super().__init__(GEN_MODEL, GEN_NAME + f" #{iteration:02d}", GEN_SYS_PROMPT)
 
     def _handle_end_conv_attempt(self, final_text: str):
-        """ Returns END_ACCEPTED if <DONE> was sent else END_REJECTED. """
-        if final_text != "<DONE>":
-            self._logger.info(f"[CONTINUATION] - End message different than <DONE> found.")
-            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
-                                                     reason="Only <DONE> as final_text expected.")
-
+        """ Always end conversation, no check done. """
         self._logger.info(f"[AGENT CHAT END] - {final_text}")
         return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
 
@@ -216,16 +211,12 @@ class Debugger(Agent):
         return super().query(DEB_PROMPT)
 
     def _handle_end_conv_attempt(self, final_text: str):
-        """ Returns END_ACCEPTED if <DONE> was sent and fixes.md exists else END_REJECTED. """
-        if final_text != "<DONE>":
-            self._logger.info(f"[CONTINUATION] - End message different than <DONE> found.")
-            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
-                                                     reason="Only <DONE> as final_text expected.")
-
+        """ Returns END_ACCEPTED if fixes.md exists else END_REJECTED. """
         if not Path(REPORTS_PATH / "fixes.md").exists():
+            result = dict(conversation_end=False, reason="expected_output_missing")
+            self._logger.info(f"[TOOL RESULT] - end_conversation -> {_redact_tool_result('end_conversation', result)}")
             self._logger.info(f"[CONTINUATION] - Expected output fixes.md not found.")
-            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
-                                                     reason="Expected output `fixes.md` missing.")
+            return ToolCallResult.END_REJECTED, result
 
         self._logger.info(f"[AGENT CHAT END] - {final_text}")
         return ToolCallResult.END_ACCEPTED, dict(conversation_end=True)
@@ -243,14 +234,16 @@ class Evaluator(Agent):
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_REJECTED if <DONE> was not sent or fixes.md doesn't exist else (END_FINAL_SUITE if <FINAL> else END_REWORK_REQ). """
         if final_text not in ["<REWORK>", "<FINAL>"]:
+            result = dict(conversation_end=False, reason="invalid_final_text")
+            self._logger.info(f"[TOOL RESULT] - end_conversation -> {_redact_tool_result('end_conversation', result)}")
             self._logger.info(f"[CONTINUATION] - End message different than <REWORK> or <FINAL> found.")
-            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
-                                                     reason="Only <REWORK> or <FINAL> as final_text expected.")
+            return ToolCallResult.END_REJECTED, result
 
         if not Path(REPORTS_PATH / "evaluation.md").exists():
+            result = dict(conversation_end=False, reason="expected_output_missing")
+            self._logger.info(f"[TOOL RESULT] - end_conversation -> {_redact_tool_result('end_conversation', result)}")
             self._logger.info(f"[CONTINUATION] - Expected output evaluation.md not found.")
-            return ToolCallResult.END_REJECTED, dict(conversation_end=False,
-                                                     reason="Expected output `evaluation.md` missing.")
+            return ToolCallResult.END_REJECTED, result
 
         if final_text == "<FINAL>":
             self._logger.info(f"[AGENT CHAT END] - {final_text}")
