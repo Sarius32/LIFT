@@ -191,7 +191,8 @@ class Agent(ABC):
                 else:
                     self._logger.debug(f"[EVENT] - {content}")
 
-        raise Exception(f"Conversation didn't terminate within {MAX_STEPS} steps!")
+        self._logger.error(f"[FORCED STOP] - Automatically ended conversation after {MAX_STEPS} steps")
+        return ToolCallResult.END_ACCEPTED
 
 
 class Generator(Agent):
