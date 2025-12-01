@@ -171,6 +171,11 @@ class Agent(ABC):
                     for m_content in message.content:
                         if isinstance(m_content, ResponseOutputText):
                             self._logger.info(f"[RESPONSE MESSAGE] - {m_content.text}")
+                            if any([t in m_content.text for t in ["<DONE>", "<REWORK>", "<FINAL>"]]):
+                                self._logger.info("[USER INFO] - Instructed use of end_conversation tool "
+                                                  "after final_text was found in text message.")
+                                self._messages.append({"role": "user", "content": "To end a conversation, "
+                                                                                  "use the `end_conversation` tool!"})
                         else:
                             self._logger.info(f"[RESPONSE MESSAGE REFUSAL] - {m_content.refusal}")
 
