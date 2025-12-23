@@ -1,12 +1,9 @@
-import pickle
-
 import logging_
 
 LOGGER = logging_.get_logger(__name__)
 
 import shutil, subprocess, sys
 
-from agents import Agent
 from env import PROJECT_PATH, DATA_PATH, LIFT_ARCHIVE, ARCHIVE_CON, PUT_NAME, PUT_PATH, TESTS_PATH, REPORTS_PATH, \
     CONFIG_PATH
 from report_utils import parse_cur_exec_report
@@ -81,63 +78,6 @@ def setup_new_project() -> None:
     REPORTS_PATH.mkdir()
 
 
-def archive_tests(iteration: int) -> None:
-    # remove __pycache__ in tests
-    pycache = TESTS_PATH / "__pycache__"
-    if pycache.exists():
-        shutil.rmtree(pycache, ignore_errors=True)
-
-    test_zip = shutil.make_archive(LIFT_ARCHIVE / f"tests_{iteration:02d}", "zip", TESTS_PATH)
-    LOGGER.info(f"ARCHIVING: tests for iteration {iteration} -> {test_zip}")
-
-
-def archive_exec_eval(iteration: int, delete=True) -> None:
-    # zip reports
-    progress_zip = shutil.make_archive(LIFT_ARCHIVE / f"reports_{iteration:02d}", "zip", REPORTS_PATH)
-
-    # delete reports if wanted
-    if delete:
-        shutil.rmtree(REPORTS_PATH, ignore_errors=True)
-
-    LOGGER.info(f"ARCHIVING: reports for iteration {iteration} -> {progress_zip}")
-
-
-def archive_first_final_suite(iteration: int) -> None:
-    fss_path = (LIFT_ARCHIVE / "_FSS_").resolve()
-
-    # copy reports
-    shutil.copytree(REPORTS_PATH, fss_path)
-
-    # copy tests
-    shutil.copytree(TESTS_PATH, fss_path / "tests")
-    shutil.rmtree(fss_path / "tests" / "__pycache__", ignore_errors=True)
-
-    # create iteration marker
-    open(fss_path / f"FSS_{iteration}", "x")
-
-    LOGGER.info(f"ARCHIVING: First Sufficient Suite for iteration {iteration}")
-
-
-def archive_last_passing_suite(iteration: int) -> None:
-    lps_path = (LIFT_ARCHIVE / "_LPS_new").resolve()
-
-    # copy reports
-    shutil.copytree(REPORTS_PATH, lps_path)
-
-    # copy tests
-    shutil.copytree(TESTS_PATH, lps_path / "tests")
-    shutil.rmtree(lps_path / "tests" / "__pycache__", ignore_errors=True)
-
-    # create iteration marker
-    open(lps_path / f"LPS_{iteration}", "x")
-
-    # copy new LPS
-    shutil.rmtree(LIFT_ARCHIVE / "_LPS_", ignore_errors=True)
-    shutil.move(lps_path, LIFT_ARCHIVE / "_LPS_")
-
-    LOGGER.info(f"ARCHIVING: Updating Last Passing Suite to iteration {iteration}")
-
-
 def rm_report_temps() -> None:
     [file.unlink() for file in REPORTS_PATH.glob("*.json")]
 
@@ -161,8 +101,3 @@ def execute_tests() -> bool:
     rm_report_temps()
 
     return e.returncode == 0
-
-
-def archive_agent(agent: Agent, iteration: int) -> None:
-    with open(ARCHIVE_CON / f"{iteration:02d}_{agent.type_}.pkl", "wb") as file:
-        pickle.dump(agent, file)
