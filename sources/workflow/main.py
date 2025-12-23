@@ -1,5 +1,8 @@
 import env
 import logging_
+
+logging_.setup_logging()
+
 from logging import getLogger
 
 env.log()

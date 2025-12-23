@@ -52,15 +52,8 @@ CONFIG = lambda file_path: {
     }
 }
 
-_setup = False
 
-
-def _setup_logging():
-    global _setup
-
-    if _setup:
-        return
-
+def setup_logging():
     # Create logs directory
     log_dir = Path("logs")
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -77,12 +70,3 @@ def _setup_logging():
     logger = logging.getLogger(__name__)
     logger.info(f"Logging initialized - File: {log_file}")
     logger.debug(f"File log level: DEBUG, Console log level: INFO")
-
-    _setup = True
-
-
-_setup_logging()
-
-
-def get_logger(name):
-    return logging.getLogger(name)
