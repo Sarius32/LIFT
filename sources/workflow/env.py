@@ -1,11 +1,10 @@
 import os
+from logging import getLogger
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-import logging_
-
-LOGGER = logging_.get_logger(__name__)
+LOGGER = getLogger(__name__)
 _setup = False
 
 API_KEY, PUT_NAME, MAX_ITER = None, None, None

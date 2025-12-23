@@ -1,9 +1,10 @@
 import env
 import logging_
+from logging import getLogger
 
 env.log()
 
-LOGGER = logging_.get_logger(__name__)
+LOGGER = getLogger(__name__)
 
 from agents import Generator, GeneratorState, Evaluator, Debugger
 from archiving import archive_agent, archive_suite, archive_tests, archive_reports

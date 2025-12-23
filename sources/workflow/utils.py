@@ -1,6 +1,6 @@
-import logging_
+from logging import getLogger
 
-LOGGER = logging_.get_logger(__name__)
+LOGGER = getLogger(__name__)
 
 import shutil, subprocess, sys
 

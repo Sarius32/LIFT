@@ -1,9 +1,9 @@
 from dataclasses import dataclass
+from logging import getLogger
 
 from env import DATA_PATH, PUT_NAME
-import logging_
 
-LOGGER = logging_.get_logger(__name__)
+LOGGER = getLogger(__name__)
 
 
 @dataclass
