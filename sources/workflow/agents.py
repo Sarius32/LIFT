@@ -1,5 +1,7 @@
 import json
 from abc import abstractmethod, ABC
+from enum import Enum, auto
+from logging import getLogger
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -8,11 +10,9 @@ from openai import OpenAI, RateLimitError
 from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCall, ResponseReasoningItem, Response, \
     ResponseOutputText
 
-import logging_
-from env import API_KEY, GEN_MODEL, DEBUG_MODEL, EVAL_MODEL, PROJECT_PATH, REPORTS_PATH
+from env import API_KEY, REPORTS_PATH
 from project_utils import ToolCallResult
-from prompts import GEN_NAME, GEN_SYS_PROMPT, DEB_NAME, DEB_SYS_PROMPT, DEB_PROMPT, EVAL_NAME, EVAL_SYS_PROMPT, \
-    EVAL_PROMPT
+from prompts import GeneratorPrompts, DebuggerPrompts, EvaluatorPrompts, Prompts
 from tools import TOOLS_SPEC, TOOLS_IMPL
 
 MAX_STEPS = 50
@@ -84,16 +84,15 @@ def _redact_tool_result(name: str, result: dict) -> dict:
 
 
 class Agent(ABC):
-    type_ = "agent"
+    type_: str
 
-    def __init__(self, model: str, name: str, sys_prompt: str):
+    def __init__(self, model: str, prompts: Prompts, logger_name: str):
         self._model = model
+        self._prompts = prompts
+        self._logger = getLogger(logger_name)
 
-        self._logger = logging_.get_logger("AGENT " + name)
-        self._sys_prompt = sys_prompt
-
-        self._logger.debug(f"System prompt: {_preview(repr(self._sys_prompt))}")
-        self._messages = [{"role": "system", "content": self._sys_prompt}]
+        self._logger.debug(f"System prompt: {_preview(repr(prompts.system))}")
+        self._messages = [{"role": "system", "content": prompts.system}]
 
     @abstractmethod
     def _handle_end_conv_attempt(self, final_text: str) -> tuple[ToolCallResult, Any]:
@@ -133,10 +132,7 @@ class Agent(ABC):
 
         return end
 
-    def query(self, instruction: str):
-        self._logger.info(f"Calling with instruction: {_preview(repr(instruction))}")
-        self._messages.append({"role": "user", "content": instruction})
-
+    def _query(self):
         client = OpenAI(api_key=API_KEY)
         for step in range(MAX_STEPS):
             response = None
@@ -195,11 +191,25 @@ class Agent(ABC):
         return ToolCallResult.END_ACCEPTED
 
 
-class Generator(Agent):
-    type_ = GEN_NAME.lower()
+class GeneratorState(Enum):
+    INIT = auto()
+    ERROR = auto()
+    REFINE = auto()
 
-    def __init__(self, iteration):
-        super().__init__(GEN_MODEL, GEN_NAME + f" #{iteration:02d}", GEN_SYS_PROMPT)
+
+class Generator(Agent):
+    type_ = "GENERATOR"
+
+    def __init__(self, model: str, prompts: GeneratorPrompts, iteration: int):
+        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
+
+    def run(self, state: GeneratorState):
+        instrs = {GeneratorState.INIT: self._prompts.init, GeneratorState.ERROR: self._prompts.error,
+                  GeneratorState.REFINE: self._prompts.refine}
+        instr = instrs[state]
+        self._messages.append({"role": "user", "content": instr})
+        self._logger.info(f"Calling with instruction: {_preview(repr(instr))}")
+        return super()._query()
 
     def _handle_end_conv_attempt(self, final_text: str):
         """ Always end conversation, no check done. """
@@ -208,13 +218,15 @@ class Generator(Agent):
 
 
 class Debugger(Agent):
-    type_ = DEB_NAME.lower()
+    type_ = "DEBUGGER"
 
-    def __init__(self, iteration):
-        super().__init__(DEBUG_MODEL, DEB_NAME + f" #{iteration:02d}", DEB_SYS_PROMPT)
+    def __init__(self, model: str, prompts: DebuggerPrompts, iteration: int):
+        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
 
-    def query(self):
-        return super().query(DEB_PROMPT)
+    def debug(self):
+        self._messages.append({"role": "user", "content": self._prompts.instr})
+        self._logger.info(f"Calling with instruction: {_preview(repr(self._prompts.instr))}")
+        return super()._query()
 
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_ACCEPTED if fixes.md exists else END_REJECTED. """
@@ -229,13 +241,15 @@ class Debugger(Agent):
 
 
 class Evaluator(Agent):
-    type_ = EVAL_NAME.lower()
+    type_ = "EVALUATOR"
 
-    def __init__(self, iteration):
-        super().__init__(EVAL_MODEL, EVAL_NAME + f" #{iteration:02d}", EVAL_SYS_PROMPT)
+    def __init__(self, model: str, prompts: EvaluatorPrompts, iteration: int):
+        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
 
-    def query(self):
-        return super().query(EVAL_PROMPT)
+    def evaluate(self):
+        self._messages.append({"role": "user", "content": self._prompts.instr})
+        self._logger.info(f"Calling with instruction: {_preview(repr(self._prompts.instr))}")
+        return super()._query()
 
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_REJECTED if <DONE> was not sent or fixes.md doesn't exist else (END_FINAL_SUITE if <FINAL> else END_REWORK_REQ). """

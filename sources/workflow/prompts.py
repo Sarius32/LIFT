@@ -1,7 +1,27 @@
+from dataclasses import dataclass
+
 from env import DATA_PATH, PUT_NAME
 import logging_
 
 LOGGER = logging_.get_logger(__name__)
+
+
+@dataclass
+class GeneratorPrompts:
+    system: str
+    init: str
+    error: str
+    refine: str
+
+
+@dataclass
+class DebuggerPrompts:
+    system: str
+    instr: str
+
+
+EvaluatorPrompts = DebuggerPrompts
+Prompts = GeneratorPrompts | DebuggerPrompts | EvaluatorPrompts
 
 
 def get_sys_prompt(name):

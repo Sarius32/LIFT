@@ -5,10 +5,11 @@ env.log()
 
 LOGGER = logging_.get_logger(__name__)
 
-from agents import Generator, Evaluator, Debugger
+from agents import Generator, GeneratorState, Evaluator, Debugger
 from archiving import archive_agent, archive_suite, archive_tests, archive_reports
 from archiving import SuiteType as SType
-from prompts import GEN_INIT_PROMPT, GEN_REFINE_PROMPT, GEN_ERROR_PROMPT
+from prompts import GEN_SYS_PROMPT, GEN_INIT_PROMPT, GEN_REFINE_PROMPT, GEN_ERROR_PROMPT, GeneratorPrompts, \
+    DebuggerPrompts, DEB_PROMPT, DEB_SYS_PROMPT, EvaluatorPrompts, EVAL_PROMPT, EVAL_SYS_PROMPT
 from project_utils import ToolCallResult
 from utils import setup_new_project, execute_tests
 
@@ -18,15 +19,17 @@ def main():
 
     setup_new_project()
 
-    gen_prompt = GEN_INIT_PROMPT
+    gen_state = GeneratorState.INIT
     iteration = 0
     for iteration in range(env.MAX_ITER):
         LOGGER.info(f"--- ITERATION #{iteration:02d} ---")
 
         # generate/refine suite
         LOGGER.info(" + GENERATION + ")
-        generator = Generator(iteration)
-        generator.query(gen_prompt)
+        generator = Generator(env.GEN_MODEL,
+                              GeneratorPrompts(GEN_SYS_PROMPT, GEN_INIT_PROMPT, GEN_ERROR_PROMPT, GEN_REFINE_PROMPT),
+                              iteration)
+        generator.run(gen_state)
         archive_agent(env.ARCHIVE_CON, generator, iteration)
 
         # archive last iterations output + feedback
@@ -39,17 +42,17 @@ def main():
         if not passing:
             # provide fixes (DEBUGGER)
             LOGGER.info(" + DEBUGGER + ")
-            debugger = Debugger(iteration)
-            debugger.query()
-            gen_prompt = GEN_ERROR_PROMPT
+            debugger = Debugger(env.DEBUG_MODEL, DebuggerPrompts(DEB_SYS_PROMPT, DEB_PROMPT), iteration)
+            debugger.debug()
+            gen_state = GeneratorState.ERROR
             archive_agent(env.ARCHIVE_CON, debugger, iteration)
 
         else:
             # run EVALUATOR
             LOGGER.info(f" + EVALUATION + ")
-            evaluator = Evaluator(iteration)
-            evaluation = evaluator.query()
-            gen_prompt = GEN_REFINE_PROMPT
+            evaluator = Evaluator(env.EVAL_MODEL, EvaluatorPrompts(EVAL_SYS_PROMPT, EVAL_PROMPT), iteration)
+            evaluation = evaluator.evaluate()
+            gen_state = GeneratorState.REFINE
             archive_agent(env.ARCHIVE_CON, evaluator, iteration)
 
             # archive FSS (First Sufficient Suite)
