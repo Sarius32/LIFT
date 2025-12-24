@@ -15,7 +15,7 @@ class SuiteType(Enum):
 
 
 def archive_agent(archive: Path, agent: Agent, iteration: int) -> None:
-    loc = archive / f"{iteration:02d}_{agent.type_}.pkl"
+    loc = archive / f"{iteration:02d}_{agent.type_.lower()}.pkl"
     with open(loc, "wb") as file:
         pickle.dump(agent, file)
         LOGGER.info(f"{agent.type_} for iteration {iteration} archived at {loc.absolute()}")
