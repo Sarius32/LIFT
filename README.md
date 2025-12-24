@@ -1,5 +1,15 @@
 # 🏗 LIFT - LLM-based Iterative Feedback-driven Test Suite Generation
 
+## 💭 Model Selection
+
+LIFT uses `litellm` to facilitate the flexible connection to different LLMs and LLM providers used for the different
+agents.<br>
+The following models are available for selection (as of Dec 24th, 2025):
+
+| OpenAI Models                                                                                                                                                                                                                                                                                         | Anthropic Models                                                                                                                                                                     |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| gpt-3.5-turbo <br> gpt-4, gpt-4-turbo <br> gpt-4.1, gpt-4.1-mini, gpt-4.1-nano <br> gpt-5, gpt-5-pro, gpt-5-mini, gpt-5-nano, gpt-5-codex <br> gpt-5.1, gpt-5.1-codex, gpt-5.1-codex-max, gpt-5.1-codex-mini <br> gpt-5.2, gpt-5.2-pro <br> o1, o1-pro, o1-mini <br> o3, o3-pro, o3-mini <br> o4-mini | claude-sonnet-4-5 <br> claude-3-opus-latest, claude-3-5-sonnet-latest, claude-3-7-sonnet-latest <br> claude-opus-4-1, claude-opus-4-5 <br> claude-3-5-haiku-latest, claude-haiku-4-5 |
+
 ## 🐳 Docker Usage
 
 In order to use LIFT containerized, either
@@ -25,8 +35,7 @@ docker run \
 Use `--rm` to remove the container as soon as LIFT concludes execution.
 Use `-d` to start the container detached.
 
-Add `-v "YOUR_LOGS_DIR:/workspace/logs"` to have the logs written outside the container.
-
+Add `-v "YOUR_LOGS_DIR:/workspace/.logs"` to have the logs written outside the container.
 
 Note: You need to link the two volumes to the `/workspace/input` (read-only) and `/workspace/.archive` (LIFT output).
 The contents of the `/input` directory will not be changed. Examples for the `/input` files need can be found under [`📂 /input`](./input) The `/input` directory needs to adhere to this layout:<br>
@@ -43,7 +52,8 @@ input/
 ```
 
 The `/.archive` directory will contain all LIFT output artifacts. These are the FSS (First Sufficient Suite), LPS (Last Passing Suite), all intermediary suites and reports as well as a pickle export of the final states of each agent after completing its task.
-The `/.archive` directory wil have this layout (automatically created, needs to be empty on start-up):<br>
+The `/.archive` directory will have this layout (automatically created, needs to be empty on start-up):<br>
+
 ```
 .archive/
 ├── archive_xx  (archive of the trial xx)
