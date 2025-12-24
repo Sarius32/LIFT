@@ -58,7 +58,7 @@ def setup_new_project(config: LiftConfig, paths: Paths, reqs: ReqScope) -> None:
     shutil.copy(paths.eval_template, (paths.project / "evaluation_template.md"))
 
     # load pytest html report template
-    with open(paths.eval_template) as file:
+    with open(paths.html_template) as file:
         lines = file.readlines()
 
     # create filled pytest HTML report config with report dir and requirements
