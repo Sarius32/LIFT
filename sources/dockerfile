@@ -9,8 +9,10 @@ COPY ./requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the workflow files
-COPY /workflow .
+# Copy the rest of the files
+COPY /LIFT ./LIFT
+COPY main.py main.py
+COPY logging_config.py logging_config.py
 
 # Default command to run
 CMD ["python", "main.py"]
