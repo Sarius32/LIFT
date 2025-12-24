@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from xml.etree.ElementTree import Element
 
-from requirements import Requirement
+from .requirements import Requirement
 
 
 class TestType(Enum):

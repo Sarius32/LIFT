@@ -1,8 +1,11 @@
 from collections import OrderedDict
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 
 import yaml
+
+LOGGER = getLogger(__name__)
 
 
 @dataclass
@@ -77,20 +80,8 @@ class ReqScope:
         return None
 
 
-_REQUIREMENTS: ReqScope
-
-
-def parse_requirements_doc(file_path: Path) -> None:
-    global _REQUIREMENTS
-
-    with open(file_path) as req_file:
+def parse_requirements_doc(req_doc: Path) -> ReqScope:
+    with open(req_doc) as req_file:
         req_data = yaml.safe_load(req_file)
-    _REQUIREMENTS = ReqScope.parse_yaml(req_data)
 
-
-def get_structured_reqs():
-    return _REQUIREMENTS
-
-
-def get_requirements_only():
-    return _REQUIREMENTS.get_requirements()
+    return ReqScope.parse_yaml(req_data)

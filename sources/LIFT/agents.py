@@ -10,10 +10,9 @@ from openai import OpenAI, RateLimitError
 from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCall, ResponseReasoningItem, Response, \
     ResponseOutputText
 
-from env import API_KEY, REPORTS_PATH
-from project_utils import ToolCallResult
-from prompts import GeneratorPrompts, DebuggerPrompts, EvaluatorPrompts, Prompts
-from tools import TOOLS_SPEC, TOOLS_IMPL
+from .prompts import GeneratorPrompts, DebuggerPrompts, EvaluatorPrompts
+from .project_utils import ToolCallResult
+from .tools import TOOLS_SPEC, TOOLS_IMPL
 
 MAX_STEPS = 50
 MAX_RETRIES = 5
@@ -86,7 +85,8 @@ def _redact_tool_result(name: str, result: dict) -> dict:
 class Agent(ABC):
     type_: str
 
-    def __init__(self, model: str, prompts: Prompts, logger_name: str):
+    def __init__(self, api_key: str, model: str, prompts, logger_name: str):
+        self._api_key = api_key
         self._model = model
         self._prompts = prompts
         self._logger = getLogger(logger_name)
@@ -133,7 +133,7 @@ class Agent(ABC):
         return end
 
     def _query(self):
-        client = OpenAI(api_key=API_KEY)
+        client = OpenAI(api_key=self._api_key)
         for step in range(MAX_STEPS):
             response = None
             for retry in range(MAX_RETRIES):
@@ -200,8 +200,8 @@ class GeneratorState(Enum):
 class Generator(Agent):
     type_ = "GENERATOR"
 
-    def __init__(self, model: str, prompts: GeneratorPrompts, iteration: int):
-        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
+    def __init__(self, api_key: str, model: str, prompts: GeneratorPrompts, iteration: int):
+        super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
 
     def run(self, state: GeneratorState):
         instrs = {GeneratorState.INIT: self._prompts.init, GeneratorState.ERROR: self._prompts.error,
@@ -220,8 +220,9 @@ class Generator(Agent):
 class Debugger(Agent):
     type_ = "DEBUGGER"
 
-    def __init__(self, model: str, prompts: DebuggerPrompts, iteration: int):
-        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
+    def __init__(self, api_key: str, model: str, prompts: DebuggerPrompts, reports: Path, iteration: int):
+        super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
+        self._reports = reports
 
     def debug(self):
         self._messages.append({"role": "user", "content": self._prompts.instr})
@@ -230,7 +231,7 @@ class Debugger(Agent):
 
     def _handle_end_conv_attempt(self, final_text: str):
         """ Returns END_ACCEPTED if fixes.md exists else END_REJECTED. """
-        if not Path(REPORTS_PATH / "fixes.md").exists():
+        if not Path(self._reports / "fixes.md").exists():
             result = dict(conversation_end=False, reason="expected_output_missing")
             self._logger.info(f"[TOOL RESULT] - end_conversation -> {_redact_tool_result('end_conversation', result)}")
             self._logger.info(f"[CONTINUATION] - Expected output fixes.md not found.")
@@ -243,8 +244,9 @@ class Debugger(Agent):
 class Evaluator(Agent):
     type_ = "EVALUATOR"
 
-    def __init__(self, model: str, prompts: EvaluatorPrompts, iteration: int):
-        super().__init__(model, prompts, self.type_ + f" #{iteration:02d}")
+    def __init__(self, api_key: str, model: str, prompts: EvaluatorPrompts, reports: Path, iteration: int):
+        super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
+        self._reports = reports
 
     def evaluate(self):
         self._messages.append({"role": "user", "content": self._prompts.instr})
@@ -259,7 +261,7 @@ class Evaluator(Agent):
             self._logger.info(f"[CONTINUATION] - End message different than <REWORK> or <FINAL> found.")
             return ToolCallResult.END_REJECTED, result
 
-        if not Path(REPORTS_PATH / "evaluation.md").exists():
+        if not Path(self._reports / "evaluation.md").exists():
             result = dict(conversation_end=False, reason="expected_output_missing")
             self._logger.info(f"[TOOL RESULT] - end_conversation -> {_redact_tool_result('end_conversation', result)}")
             self._logger.info(f"[CONTINUATION] - Expected output evaluation.md not found.")

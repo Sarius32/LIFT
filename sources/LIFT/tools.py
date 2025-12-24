@@ -3,10 +3,18 @@ import shutil
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 
-from env import PROJECT_PATH
-from project_utils import tool_metadata
-from report_utils import get_current_suite
-from requirements import get_structured_reqs, get_requirements_only
+from .project_utils import tool_metadata
+from .report_utils import get_current_suite
+from .requirements import ReqScope
+
+PROJECT_PATH: Path = None
+REQS: ReqScope = None
+
+
+def init_tools(project_path: Path, reqs: ReqScope):
+    global PROJECT_PATH, REQS
+    PROJECT_PATH = project_path
+    REQS = reqs
 
 
 def safe_path(rel: str) -> Optional[Path]:
@@ -348,7 +356,7 @@ def tool_replace_in_file(path: str, find: str, replace: str) -> Dict[str, Any]:
 )
 def tool_get_all_requirements() -> dict:
     """ Returns the ordered dict of all requirements (structured by scopes). """
-    return get_structured_reqs().to_dict()
+    return REQS.to_dict()
 
 
 @tool_metadata(
@@ -357,7 +365,7 @@ def tool_get_all_requirements() -> dict:
 )
 def tool_get_all_requirement_ids():
     """ Returns all requirement ids. """
-    return {"req_ids": [req.id for req in get_requirements_only()]}
+    return {"req_ids": [req.id for req in REQS.get_requirements()]}
 
 
 @tool_metadata(
@@ -367,7 +375,7 @@ def tool_get_all_requirement_ids():
 )
 def tool_get_requirement_data(identifier: str):
     """ Returns the requirement details based on its identifier (if available). """
-    req = get_structured_reqs().find_requirement(identifier)
+    req = REQS.find_requirement(identifier)
     if req is None:
         return {"error": "identifier_unknown"}
 
@@ -384,7 +392,7 @@ def tool_get_tests_with_invalid_reqs():
     if testsuite is None:
         return {"error": "no_execution_report_generated"}
 
-    tests = testsuite.get_tests_with_incorrect_req_ids(get_requirements_only())
+    tests = testsuite.get_tests_with_incorrect_req_ids(REQS.get_requirements())
     return {"tests": [test.to_dict() for test in tests]}
 
 

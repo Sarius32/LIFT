@@ -1,8 +1,3 @@
-import logging
-import logging.config
-from datetime import datetime
-from pathlib import Path
-
 CONFIG = lambda file_path: {
     'version': 1,
     'disable_existing_loggers': False,
@@ -51,22 +46,3 @@ CONFIG = lambda file_path: {
         }
     }
 }
-
-
-def setup_logging():
-    # Create logs directory
-    log_dir = Path("logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate log filename if not provided
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file_name = f"LIFT_{timestamp}.log"
-    log_file = log_dir / log_file_name
-
-    # Apply configuration
-    logging.config.dictConfig(CONFIG(log_file))
-
-    # Create logger for this module and log setup completion
-    logger = logging.getLogger(__name__)
-    logger.info(f"Logging initialized - File: {log_file}")
-    logger.debug(f"File log level: DEBUG, Console log level: INFO")

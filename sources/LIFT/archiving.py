@@ -1,10 +1,10 @@
 import pickle
 import shutil
-from enum import Enum, auto
+from enum import Enum
 from logging import getLogger
 from pathlib import Path
 
-from agents import Agent
+from .agents import Agent
 
 LOGGER = getLogger(__name__)
 
