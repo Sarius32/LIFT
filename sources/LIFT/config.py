@@ -5,6 +5,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .models import Model, validate_model
+
 LOGGER = getLogger(__name__)
 
 SetupError = Exception
@@ -14,9 +16,9 @@ SetupError = Exception
 class LiftConfig:
     api_key: str
 
-    generator: str
-    debugger: str
-    evaluator: str
+    generator: Model
+    debugger: Model
+    evaluator: Model
 
     put_name: str
     max_iterations: int
@@ -49,6 +51,11 @@ class LiftConfig:
         debug_model = os.getenv("LIFT_DEBUG_MODEL")
         eval_model = os.getenv("LIFT_EVAL_MODEL")
 
+        if all_model and gen_model and debug_model and eval_model:
+            LOGGER.error("Either set all agent models individually (LIFT_GEN_MODEL, LIFT_DEBUG_MODEL, "
+                         "LIFT_EVAL_MODEL) or define fallback model using LIFT_MODEL in .env file - not all vars!")
+            raise SetupError(f"Models not properly set in .env file!")
+
         if not all_model:
             if not gen_model or not debug_model or not eval_model:
                 LOGGER.error(
@@ -56,9 +63,9 @@ class LiftConfig:
                     "or define fallback model using LIFT_MODEL in .env file!")
                 raise SetupError(f"Models not properly set in .env file!")
 
-        self.generator = gen_model or all_model
-        self.debugger = debug_model or all_model
-        self.evaluator = eval_model or all_model
+        self.generator = validate_model(gen_model or all_model)
+        self.debugger = validate_model(debug_model or all_model)
+        self.evaluator = validate_model(eval_model or all_model)
 
         LOGGER.info(
             "Setup environment:\n"
