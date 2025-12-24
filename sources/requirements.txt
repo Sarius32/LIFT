@@ -1,5 +1,5 @@
 dotenv==0.9.9
-openai==2.6.0
+litellm==1.80.10
 pytest==8.3.5
 pytest-cov==6.1.1
 pytest-html-report==1.0.6

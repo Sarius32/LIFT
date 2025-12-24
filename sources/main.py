@@ -3,6 +3,8 @@ import logging.config
 from datetime import datetime
 from pathlib import Path
 
+import litellm
+
 from LIFT import Process as LiftProcess
 from logging_config import CONFIG
 
@@ -23,6 +25,8 @@ def setup_logging(log_dir=Path("logs")):
     logger = logging.getLogger(__name__)
     logger.info(f"Logging initialized - File: {_log_file}")
     logger.debug(f"File log level: DEBUG, Console log level: INFO")
+
+    litellm.verbose_logger.setLevel(logging.WARNING)
 
 
 def main():

@@ -6,10 +6,12 @@ from pathlib import Path
 from time import sleep
 from typing import Any
 
-from openai import OpenAI, RateLimitError
+from litellm import responses
+from openai import RateLimitError
 from openai.types.responses import ResponseOutputMessage, ResponseFunctionToolCall, ResponseReasoningItem, Response, \
     ResponseOutputText
 
+from .models import Model, litellm_model
 from .prompts import GeneratorPrompts, DebuggerPrompts, EvaluatorPrompts
 from .project_utils import ToolCallResult
 from .tools import TOOLS_SPEC, TOOLS_IMPL
@@ -85,7 +87,7 @@ def _redact_tool_result(name: str, result: dict) -> dict:
 class Agent(ABC):
     type_: str
 
-    def __init__(self, api_key: str, model: str, prompts, logger_name: str):
+    def __init__(self, api_key: str, model: Model, prompts, logger_name: str):
         self._api_key = api_key
         self._model = model
         self._prompts = prompts
@@ -133,14 +135,12 @@ class Agent(ABC):
         return end
 
     def _query(self):
-        client = OpenAI(api_key=self._api_key)
         for step in range(MAX_STEPS):
             response = None
             for retry in range(MAX_RETRIES):
                 try:
-                    response: Response = client.responses.create(
-                        model=self._model, input=self._messages,
-                        tools=TOOLS_SPEC, tool_choice="auto", parallel_tool_calls=False, )
+                    response: Response = responses(model=litellm_model(self._model), input=self._messages,
+                                                   tools=TOOLS_SPEC, tool_choice="auto", parallel_tool_calls=False)
                     break
                 except RateLimitError as e:
                     self._logger.info(
@@ -200,7 +200,7 @@ class GeneratorState(Enum):
 class Generator(Agent):
     type_ = "GENERATOR"
 
-    def __init__(self, api_key: str, model: str, prompts: GeneratorPrompts, iteration: int):
+    def __init__(self, api_key: str, model: Model, prompts: GeneratorPrompts, iteration: int):
         super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
 
     def run(self, state: GeneratorState):
@@ -220,7 +220,7 @@ class Generator(Agent):
 class Debugger(Agent):
     type_ = "DEBUGGER"
 
-    def __init__(self, api_key: str, model: str, prompts: DebuggerPrompts, reports: Path, iteration: int):
+    def __init__(self, api_key: str, model: Model, prompts: DebuggerPrompts, reports: Path, iteration: int):
         super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
         self._reports = reports
 
@@ -244,7 +244,7 @@ class Debugger(Agent):
 class Evaluator(Agent):
     type_ = "EVALUATOR"
 
-    def __init__(self, api_key: str, model: str, prompts: EvaluatorPrompts, reports: Path, iteration: int):
+    def __init__(self, api_key: str, model: Model, prompts: EvaluatorPrompts, reports: Path, iteration: int):
         super().__init__(api_key, model, prompts, self.type_ + f" #{iteration:02d}")
         self._reports = reports
 
